@@ -1,0 +1,22 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+    "name": "PasturesIntegration",
+    "short": "Custom made whtielisting and player count integration for Greener Pastures.",
+    "description": "Connects greener pastures player data, and allows for easy-one click whitelisting of new players.",
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "install_msg": "Let's go! MedsNET Pastures-Integration installed!",
+    "author": [
+        "Mednis#4521"
+    ],
+    "required_cogs": {},
+    "requirements": [],
+    "tags": [
+        "Players,",
+        "Minecraft,",
+        "Whitelist"
+    ],
+    "min_bot_version": "3.3.10",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}
