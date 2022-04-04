@@ -6,6 +6,7 @@ from typing import Literal
 
 import discord
 from mcrcon import MCRcon
+from mcrcon import MCRconException
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.config import Config
@@ -201,6 +202,6 @@ class PasturesIntegration(commands.Cog):
                 except (ConnectionResetError, ConnectionAbortedError):
                     raise RuntimeError("Error Connecting to server!")
                 return response
-        except ConnectionRefusedError:
+        except (ConnectionRefusedError, MCRconException):
             raise RuntimeError("Error Connecting to server!")
 
