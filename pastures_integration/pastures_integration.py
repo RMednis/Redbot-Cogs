@@ -171,7 +171,9 @@ class PasturesIntegration(commands.Cog):
         players = await minecraft_helpers.player_online(data)
 
         randomwords = ["building", "exploring", "vibing", "commiting arson", "bartering", "singing to ABBA", "online",
-                       "cooking", "fighting for their lives", "commiting war crimes", "exploring", "hunting"]
+                       "cooking", "fighting for their lives", "commiting war crimes", "exploring", "hunting", "baking",
+                       "trying not to explode", "sometimes exploding", "dungeon hunting", "flying around the place",
+                       "looking at the wildlife", "talking to Humphrey"]
 
         description = f"{player_amount['current']}/{player_amount['max']} People {random.choice(randomwords)}!"
 
