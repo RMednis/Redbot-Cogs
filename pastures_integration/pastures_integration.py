@@ -38,7 +38,6 @@ class PasturesIntegration(commands.Cog):
             "persistent_message": "",
             "allowed_users": "",
             "allowed_whitelisters": "",
-            "refresh_time": 30,
             "host": "",
             "apikey": ""
         }
