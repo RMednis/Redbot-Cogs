@@ -22,7 +22,7 @@ log = logging.getLogger("red.mednis-cogs.pastures_integration")
 
 class PasturesIntegration(commands.Cog):
     """
-    Custom made whtielisting and player count integration for Greener Pastures.
+    Custom-made whitelisting and player count integration for Greener Pastures.
     """
 
     def __init__(self, bot: Red) -> None:
@@ -68,7 +68,7 @@ class PasturesIntegration(commands.Cog):
 
             if (channel_id != "") and (message_id != ""):
                 if (ip != "") and (key != ""):
-                    embed = await self.player_embed(ip, key)
+                    embed = await self.player_embed(ip, key, "_This message updates every minute! :watch:_")
                     channel = guild.get_channel(channel_id)
                     message = await channel.fetch_message(message_id)
 
@@ -160,10 +160,10 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(ctx.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
-        embed = await self.player_embed(ip, key)
+        embed = await self.player_embed(ip, key, "_This message will not update!_")
         await ctx.send(embed=embed)
 
-    async def player_embed(self, ip, key):
+    async def player_embed(self, ip, key, message):
         try:
             data = await self.run_rcon_command(ip, key, "list")
         except RuntimeError as err:
@@ -200,9 +200,11 @@ class PasturesIntegration(commands.Cog):
             player_name_string = "`None`\n"
 
         embed.add_field(name="Currently Online:",
-                        value=player_name_string + "\n_This message updates every minute! :watch:_")
+                        value=player_name_string + f"\n{message}")
 
         return embed
+
+
 
     async def run_rcon_command(self, ip, key, command):
         try:
