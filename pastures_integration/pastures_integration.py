@@ -1,6 +1,7 @@
 import datetime
 import logging
 import random
+
 from discord.ext import tasks
 from typing import Literal
 
@@ -117,18 +118,7 @@ class PasturesIntegration(commands.Cog):
         **channel** - The channel where the notification should be posted!
         """
         guild_config = self.config.guild(ctx.guild)
-        channel_id = await guild_config.persistent_channel()
-        message_id = await guild_config.persistent_message()
-
-        # Clear existing message if it exists!
-        if channel_id != "":
-            if message_id != "":
-                channel = ctx.guild.get_channel(channel_id)
-                message = await channel.fetch_message(message_id)
-                message.delete()
-                await guild_config.persistent_message.set("")
-            await guild_config.persistent_channel.set("")
-
+        await self.remove(ctx, False)
 
         # Placeholder message!
         embed = discord.Embed(title="Greener Pastures Server Status",
@@ -144,6 +134,26 @@ class PasturesIntegration(commands.Cog):
         # Set the new location!
         await guild_config.persistent_channel.set(channel_input.id)
         await guild_config.persistent_message.set(message.id)
+
+    @embed.command(name="remove")
+    @commands.admin()
+    async def remove(self, ctx, msg=True):
+        """Removes the persistent notification"""
+        guild_config = self.config.guild(ctx.guild)
+        channel_id = await guild_config.persistent_channel()
+        message_id = await guild_config.persistent_message()
+
+        if channel_id != "":
+            if message_id != "":
+                channel = ctx.guild.get_channel(channel_id)
+                message = await channel.fetch_message(message_id)
+                await message.delete()
+                await guild_config.persistent_message.set("")
+
+                if msg:
+                    await ctx.send("**Persistant message removed!**")
+
+            await guild_config.persistent_channel.set("")
 
     @pastures.command(name="players")
     @commands.admin_or_permissions(manage_guild=True)
