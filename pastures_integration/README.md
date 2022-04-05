@@ -9,3 +9,17 @@ This cog provides 2 functions:
 
 _This cog isn't really meant for public consumption, all the branding is currently baked into the main embed function, with no direct way of editing it!_
 
+## Screenshot Examples
+
+- Persistent Server Status Embed  
+![Embed Example](example.png)
+
+
+## Commands
+
+- `pastures` - The main cog config command!
+    - `config` - Used for setting the main RCON credentials i.e. `<Server IP> <Rcon Password>`
+    - `players` - Returns a non-updating, one time embed with the server/player status
+    - `embed` - Controls the live-updating persistent embed
+      - `add` - Post an embed to a channel! (Add the channel name with #<channel>)
+      - `remove` - Removes the embed and stops live updating
