@@ -69,12 +69,18 @@ class PasturesIntegration(commands.Cog):
             if (channel_id != "") and (message_id != ""):
                 if (ip != "") and (key != ""):
                     embed = await self.player_embed(ip, key, "_This message updates every minute! :watch:_")
-                    channel = guild.get_channel(channel_id)
-                    message = await channel.fetch_message(message_id)
-
-                    await message.edit(embed=embed)
-
-                    log.info("Updated embed!")
+                    try:
+                        channel = guild.get_channel(channel_id)
+                        if channel is not None:
+                            message = await channel.fetch_message(message_id)
+                            await message.edit(embed=embed)
+                            log.info("Updated embed!")
+                        else:
+                            raise RuntimeError("Channel deleted!")
+                    except (discord.errors.NotFound, RuntimeError):
+                        log.warning("Message and/or channel has been deleted. Clearing stored id's!")
+                        await guild_config.persistent_channel.set("")
+                        await guild_config.persistent_message.set("")
 
     @commands.group(autohelp=True, aliases=["pst"])
     @commands.admin()
@@ -144,15 +150,19 @@ class PasturesIntegration(commands.Cog):
 
         if channel_id != "":
             if message_id != "":
-                channel = ctx.guild.get_channel(channel_id)
-                message = await channel.fetch_message(message_id)
-                await message.delete()
+                try:
+                    channel = ctx.guild.get_channel(channel_id)
+                    message = await channel.fetch_message(message_id)
+                    await message.delete()
+                except discord.errors.NotFound:
+                    if msg:
+                        await ctx.send("**Persistent message or channel allready deleted!**")
+
                 await guild_config.persistent_message.set("")
-
-                if msg:
-                    await ctx.send("**Persistant message removed!**")
-
             await guild_config.persistent_channel.set("")
+
+        if msg:
+            await ctx.send("**Persistent message removed!**")
 
     @pastures.command(name="players")
     @commands.admin_or_permissions(manage_guild=True)
