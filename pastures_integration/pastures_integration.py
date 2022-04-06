@@ -6,8 +6,6 @@ from discord.ext import tasks
 from typing import Literal
 
 import discord
-from mcrcon import MCRcon
-from mcrcon import MCRconException
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.config import Config
@@ -173,7 +171,7 @@ class PasturesIntegration(commands.Cog):
 
     async def player_embed(self, ip, key, message):
         try:
-            data = await self.run_rcon_command(ip, key, "list")
+            data = await minecraft_helpers.run_rcon_command(ip, key, "list")
         except RuntimeError as err:
             # Error during connecting via RCon
 
@@ -212,17 +210,4 @@ class PasturesIntegration(commands.Cog):
 
         return embed
 
-
-
-    async def run_rcon_command(self, ip, key, command):
-        try:
-            with MCRcon(ip, key) as rcon:
-                try:
-                    response = rcon.command(command)
-                    rcon.disconnect()
-                except (ConnectionResetError, ConnectionAbortedError):
-                    raise RuntimeError("Error Connecting to server!")
-                return response
-        except (ConnectionRefusedError, MCRconException):
-            raise RuntimeError("Error Connecting to server!")
 
