@@ -1,6 +1,6 @@
 import datetime
 import logging
-import random
+
 
 from discord.ext import tasks
 from typing import Literal
@@ -11,7 +11,7 @@ from redbot.core.bot import Red
 from redbot.core.config import Config
 from redbot.core.utils import AsyncIter
 
-from pastures_integration import minecraft_helpers
+from pastures_integration import embed_helpers
 
 RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 
@@ -32,10 +32,17 @@ class PasturesIntegration(commands.Cog):
         )
 
         default_config = {
+            # Data for the player/server message
             "persistent_channel": "",
             "persistent_message": "",
-            "allowed_users": "",
-            "allowed_whitelisters": "",
+
+            # Data for the whitelisting functions
+            "whitelisted_role": "",
+            "moderation_role": "",
+            "logging_channel": "",
+            "whitelist_channel": "",
+
+            # Data for Rcon
             "host": "",
             "apikey": ""
         }
@@ -44,6 +51,13 @@ class PasturesIntegration(commands.Cog):
         self.update_loop.start()
 
         log.info("MedsNET Pastures Integration Loaded!")
+
+    def __unload(self):
+        # Stop the loop after unload!
+        self.update_loop.stop()
+
+    def cog_unload(self):
+        self.__unload()
 
     @tasks.loop(minutes=1)
     async def update_loop(self):
@@ -66,7 +80,7 @@ class PasturesIntegration(commands.Cog):
 
             if (channel_id != "") and (message_id != ""):
                 if (ip != "") and (key != ""):
-                    embed = await self.player_embed(ip, key, "_This message updates every minute! :watch:_")
+                    embed = await embed_helpers.online_players(ip, key, "_This message updates every minute! :watch:_")
                     try:
                         channel = guild.get_channel(channel_id)
                         message = await channel.fetch_message(message_id)
@@ -89,11 +103,18 @@ class PasturesIntegration(commands.Cog):
         _Made with <3 by Mednis!_
         """
 
-    @pastures.command(name="config")
-    @commands.guildowner()
-    async def config(self, ctx, address, key):
-        """Configure general server connection information!
+    @pastures.group(autohelp=True, aliases=["cfg"])
+    @commands.admin()
+    async def config(self, ctx):
+        """
+        Configure pastures integration settings!
 
+        """
+
+    @config.command(name="creds")
+    @commands.guildowner()
+    async def creds(self, ctx, address, key):
+        """Server Connection Credentials
         _100% Mednis Only Zone!_
 
         **address** - Server Address
@@ -107,27 +128,28 @@ class PasturesIntegration(commands.Cog):
         await ctx.message.delete()  # Yeet the message for safety!
         await ctx.send("**Credentials have been saved!**")
 
-    @pastures.group(autohelp=True, aliases=["emb"])
+    @config.group(autohelp=True, aliases=["emb"])
     @commands.admin()
     async def embed(self, ctx):
-        """Persistent notification settings"""
+        """
+        Configure persistent embed settings!
+
+        """
 
     @embed.command(name="add")
     @commands.admin()
-    async def add(self, ctx, channel_input: discord.TextChannel):
+    async def embed_add(self, ctx, channel_input: discord.TextChannel):
         """Add a persistant notification
         **channel** - The channel where the notification should be posted!
         """
         guild_config = self.config.guild(ctx.guild)
-        await self.remove(ctx, False)
+        await self.embed_remove(ctx, False)
 
         # Placeholder message!
-        embed = discord.Embed(title="Greener Pastures Server Status",
-                              description=f":orange_circle: Please wait while we gather server info!",
-                              timestamp=datetime.datetime.utcnow(), colour=0x7BC950) \
-            .set_thumbnail(url="https://file.mednis.network/static_assets/main-logo-mini.png") \
-            .set_footer(text="GP Logger 1.0",
-                        icon_url="https://file.mednis.network/static_assets/main-logo-mini.png")
+        embed = embed_helpers.customEmbed(title="Greener Pastures Server Status",
+                                          description=f":orange_circle: Please wait while we gather server info!",
+                                          timestamp=datetime.datetime.utcnow(), colour=0x7BC950
+                                          ).pastures_footer().pastures_thumbnail()
 
         # Post the placeholder!
         message = await channel_input.send(embed=embed)
@@ -138,7 +160,7 @@ class PasturesIntegration(commands.Cog):
 
     @embed.command(name="remove")
     @commands.admin()
-    async def remove(self, ctx, msg=True):
+    async def embed_remove(self, ctx, msg=True):
         """Removes the persistent notification"""
         guild_config = self.config.guild(ctx.guild)
         channel_id = await guild_config.persistent_channel()
@@ -163,51 +185,76 @@ class PasturesIntegration(commands.Cog):
     @pastures.command(name="players")
     @commands.admin_or_permissions(manage_guild=True)
     async def players(self, ctx):
+        """Show a list of the currently online players"""
         guild_config = self.config.guild(ctx.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
-        embed = await self.player_embed(ip, key, "_This message will not update!_")
+        embed = await embed_helpers.online_players(ip, key, "_This message will not update!_")
         await ctx.send(embed=embed)
 
-    async def player_embed(self, ip, key, message):
-        try:
-            data = await minecraft_helpers.run_rcon_command(ip, key, "list")
-        except RuntimeError as err:
-            # Error during connecting via RCon
+    @config.group(name="whitelist", autohelp=True, aliases=["white"])
+    @commands.admin()
+    async def conf_whitelist(self, ctx):
+        """Whitelist Settings"""
 
-            embed = discord.Embed(title="Greener Pastures Server Status", description=f":red_circle: **{err}**",
-                                  timestamp=datetime.datetime.utcnow(), colour=0x7BC950)
-            embed.set_thumbnail(url="https://file.mednis.network/static_assets/main-logo-mini.png")
-            embed.set_footer(text="GP Logger 1.0",
-                             icon_url="https://file.mednis.network/static_assets/main-logo-mini.png")
-            return embed
+    @conf_whitelist.command(name="role")
+    @commands.guildowner()
+    async def whitelist_role(self, ctx, role: discord.Role):
+        """Select which role has permission to whitelist people!"""
+        guild_config = self.config.guild(ctx.guild)
+        await guild_config.moderation_role.set(role.id)
+        await ctx.send(f"**Only people who are mods and have the `{role.name}` role will be able to whitelist!**")
 
-        player_amount = await minecraft_helpers.player_count(data)
-        players = await minecraft_helpers.player_online(data)
+    @pastures.group(name="whitelist", autohelp=True, aliases=["white", "allow", "allowlist"])
+    @commands.admin()
+    async def whitelist(self, ctx):
+        """Whitelist players on the server"""
 
-        randomwords = ["building", "exploring", "vibing", "commiting arson", "bartering", "singing to ABBA", "online",
-                       "cooking", "fighting for their lives", "commiting war crimes", "exploring", "hunting", "baking",
-                       "trying not to explode", "sometimes exploding", "dungeon hunting", "flying around the place",
-                       "looking at the wildlife", "talking to Humphrey"]
+    @whitelist.command(name="add")
+    @commands.admin()
+    async def add(self, ctx, player_name):
+        """ Add a player to the whitelist
 
-        description = f"{player_amount['current']}/{player_amount['max']} People {random.choice(randomwords)}!"
+        **player_name** - The player name to be **added** to the whitelist!
+        """
+        guild_config = self.config.guild(ctx.guild)
+        ip = await guild_config.host()
+        key = await guild_config.apikey()
+        role = ctx.guild.get_role(await guild_config.moderation_role())
 
-        embed = discord.Embed(title="Greener Pastures Server Status", description=description,
-                              timestamp=datetime.datetime.utcnow(), colour=0x7BC950)
-        embed.set_thumbnail(url="https://file.mednis.network/static_assets/main-logo-mini.png")
-        embed.set_footer(text="GP Logger 1.0",
-                         icon_url="https://file.mednis.network/static_assets/main-logo-mini.png")
+        if role in ctx.author.roles:
+            embed = await embed_helpers.whitelist_add(ip, key, player_name)
+            await ctx.send(embed=embed)
 
-        player_name_string = ""
-        if int(player_amount['current']) > 0:
-            for name in players:
-                player_name_string += f"`{name}`\n"
-        else:
-            player_name_string = "`None`\n"
+    @whitelist.command(name="remove")
+    @commands.admin()
+    async def remove(self, ctx, player_name):
+        """ Remove a player from the whitelist
 
-        embed.add_field(name="Currently Online:",
-                        value=player_name_string + f"\n{message}")
+        **player_name** - The player name to be **removed** from the whitelist!
+        """
+        guild_config = self.config.guild(ctx.guild)
+        ip = await guild_config.host()
+        key = await guild_config.apikey()
+        role = ctx.guild.get_role(await guild_config.moderation_role())
 
-        return embed
+        if role in ctx.author.roles:
+            embed = await embed_helpers.whitelist_remove(ip, key, player_name)
+            await ctx.send(embed=embed)
+
+    @whitelist.command(name="list")
+    @commands.admin()
+    async def list(self, ctx):
+        """ List the current whitelist
+        """
+        guild_config = self.config.guild(ctx.guild)
+        ip = await guild_config.host()
+        key = await guild_config.apikey()
+        role_id = await guild_config.moderation_role()
+        role = ctx.guild.get_role(role_id)
+
+        if role in ctx.author.roles:
+            embed = await embed_helpers.whitelist_list(ip, key)
+            await ctx.send(embed=embed)
 
 
