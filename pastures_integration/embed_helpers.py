@@ -94,8 +94,8 @@ async def online_players(ip, key, message):
 
     players = await minecraft_helpers.player_count(data)
 
-    randomwords = ["building", "exploring", "vibing", "commiting arson", "bartering", "singing to ABBA", "online",
-                   "cooking", "fighting for their lives", "commiting war crimes", "exploring", "hunting", "baking",
+    randomwords = ["building", "exploring", "vibing", "committing arson", "bartering", "singing to ABBA", "online",
+                   "cooking", "fighting for their lives", "committing war crimes", "exploring", "hunting", "baking",
                    "trying not to explode", "sometimes exploding", "dungeon hunting", "flying around the place",
                    "looking at the wildlife", "talking to Humphrey"]
 
