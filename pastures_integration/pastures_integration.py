@@ -31,7 +31,7 @@ class PasturesIntegration(commands.Cog):
             force_registration=True,
         )
 
-        default_config = {
+        default_guild_config = {
             # Data for the player/server message
             "persistent_channel": "",
             "persistent_message": "",
@@ -47,7 +47,7 @@ class PasturesIntegration(commands.Cog):
             "apikey": ""
         }
 
-        self.config.register_guild(**default_config)
+        self.config.register_guild(**default_guild_config)
         self.update_loop.start()
 
         log.info("MedsNET Pastures Integration Loaded!")
@@ -87,10 +87,14 @@ class PasturesIntegration(commands.Cog):
                         await message.edit(embed=embed)
                         log.info("Updated embed!")
 
-                    except (discord.errors.NotFound, AttributeError):
+                    except (discord.errors.NotFound, AttributeError) as err:
                         log.warning("Message and/or channel has been deleted. Clearing stored id's!")
+                        log.warning("Error: ", err)
                         await guild_config.persistent_channel.set("")
                         await guild_config.persistent_message.set("")
+
+                    except discord.HTTPException as HttpErr:
+                        log.error("Error editing message: ", HttpErr)
 
     @commands.group(autohelp=True, aliases=["pst"])
     @commands.admin()
@@ -172,9 +176,8 @@ class PasturesIntegration(commands.Cog):
                     channel = ctx.guild.get_channel(channel_id)
                     message = await channel.fetch_message(message_id)
                     await message.delete()
-                except discord.errors.NotFound:
-                    if msg:
-                        await ctx.send("**Persistent message or channel allready deleted!**")
+                except (discord.errors.NotFound, AttributeError):
+                    await ctx.send("**Persistent message or channel allready deleted!**")
 
                 await guild_config.persistent_message.set("")
             await guild_config.persistent_channel.set("")
@@ -224,7 +227,7 @@ class PasturesIntegration(commands.Cog):
 
         if role in ctx.author.roles:
             embed = await embed_helpers.whitelist_add(ip, key, player_name)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=10)
 
     @whitelist.command(name="remove")
     @commands.admin()
@@ -240,7 +243,7 @@ class PasturesIntegration(commands.Cog):
 
         if role in ctx.author.roles:
             embed = await embed_helpers.whitelist_remove(ip, key, player_name)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=10)
 
     @whitelist.command(name="list")
     @commands.admin()
