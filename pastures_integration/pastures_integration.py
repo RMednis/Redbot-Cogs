@@ -132,6 +132,18 @@ class PasturesIntegration(commands.Cog):
         await ctx.message.delete()  # Yeet the message for safety!
         await ctx.send("**Credentials have been saved!**")
 
+    @config.command(name="clear")
+    @commands.guildowner()
+    async def clear(self, ctx):
+        """Clears stored credentials
+        """
+        guild_config = self.config.guild(ctx.guild)
+        await guild_config.host.set("")
+        await guild_config.apikey.set("")
+
+        await ctx.message.delete()  # Yeet the message for safety!
+        await ctx.send("**Credentials cleared**")
+
     @config.group(autohelp=True, aliases=["emb"])
     @commands.admin()
     async def embed(self, ctx):
@@ -207,6 +219,14 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(ctx.guild)
         await guild_config.moderation_role.set(role.id)
         await ctx.send(f"**Only people who are mods and have the `{role.name}` role will be able to whitelist!**")
+
+    @conf_whitelist.command(name="log")
+    @commands.guildowner()
+    async def whitelist_log(self, ctx, channel: discord.TextChannel):
+        """Select which role has permission to whitelist people!"""
+        guild_config = self.config.guild(ctx.guild)
+        await guild_config.logging_channel.set(channel.id)
+        await ctx.send(f"**Whitelist changes will be logged to `{channel}`**")
 
     @pastures.group(name="whitelist", autohelp=True, aliases=["white", "allow", "allowlist"])
     @commands.admin()
