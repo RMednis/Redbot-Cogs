@@ -229,12 +229,12 @@ class PasturesIntegration(commands.Cog):
         await ctx.send(f"**Whitelist changes will be logged to `{channel}`**")
 
     @pastures.group(name="whitelist", autohelp=True, aliases=["white", "allow", "allowlist"])
-    @commands.admin()
+    @commands.mod_or_permissions(manage_guild=True)
     async def whitelist(self, ctx):
         """Whitelist players on the server"""
 
     @whitelist.command(name="add")
-    @commands.admin()
+    @commands.mod_or_permissions(manage_guild=True)
     async def add(self, ctx, player_name):
         """ Add a player to the whitelist
 
@@ -250,7 +250,7 @@ class PasturesIntegration(commands.Cog):
             await ctx.send(embed=embed, delete_after=10)
 
     @whitelist.command(name="remove")
-    @commands.admin()
+    @commands.mod_or_permissions(manage_guild=True)
     async def remove(self, ctx, player_name):
         """ Remove a player from the whitelist
 
@@ -266,7 +266,7 @@ class PasturesIntegration(commands.Cog):
             await ctx.send(embed=embed, delete_after=10)
 
     @whitelist.command(name="list")
-    @commands.admin()
+    @commands.mod_or_permissions(manage_guild=True)
     async def list(self, ctx):
         """ List the current whitelist
         """
