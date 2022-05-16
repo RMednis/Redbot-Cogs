@@ -97,7 +97,7 @@ class PasturesIntegration(commands.Cog):
                         log.error("Error editing message: ", HttpErr)
 
     @commands.group(autohelp=True, aliases=["pst"])
-    @commands.admin()
+    @commands.mod_or_permissions(manage_guild=True)
     async def pastures(self, ctx):
         """Discord integration for greener pastures
 
