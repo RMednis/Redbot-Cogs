@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 import random
@@ -6,6 +7,8 @@ import discord
 
 from pastures_integration import minecraft_helpers
 
+from redbot.core.bot import Red
+
 log = logging.getLogger("red.mednis-cogs.pastures_integration")
 
 logo = "https://file.mednis.network/static_assets/main-logo-mini.png"
@@ -13,16 +16,28 @@ logo = "https://file.mednis.network/static_assets/main-logo-mini.png"
 
 class customEmbed(discord.Embed):
     def pastures_footer(self):
-        return self.set_footer(text="GP Logger 1.1", icon_url=logo)
+        return self.set_footer(text="GP Logger 1.2", icon_url=logo)
 
     def pastures_thumbnail(self):
         return self.set_thumbnail(url=logo)
+
+    def embed_caller(self, user: discord.Member):
+        self.add_field(name="_Performed by:_", value=user.display_name)
+        return
 
 
 async def error_embed(title, error):
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
                        timestamp=datetime.datetime.utcnow(), colour=0x7BC950).pastures_footer()
 
+
+async def reaction_embed():
+
+    return customEmbed(title="Reaction setup!",
+                       description="React to this message with the emote(s) you wish to be used for one-click "
+                                   "whitelisting!",
+                       colour=0x7BC950)\
+        .pastures_footer()
 
 # The actual embeds we post in situations!
 async def whitelist_list(ip, key):
@@ -80,7 +95,7 @@ async def whitelist_add(ip, key, username: str):
         return await error_embed("Whitelist Error!", err)
 
     embed = customEmbed(title="Player Whitelisted!",
-                        description=f":green_circle: Successfully whitelisted player `{name}`",
+                        description=f":green_circle:  Successfully whitelisted player `{name}`",
                         timestamp=datetime.datetime.utcnow(),
                         colour=0x7BC950).pastures_footer()
     return embed
@@ -89,7 +104,7 @@ async def whitelist_add(ip, key, username: str):
 async def online_players(ip, key, message):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
-    except RuntimeError as err:
+    except (RuntimeError, asyncio.TimeoutError) as err:
         return await error_embed("Problem Connecting to server!", err)
 
     players = await minecraft_helpers.player_count(data)
@@ -97,7 +112,7 @@ async def online_players(ip, key, message):
     randomwords = ["building", "exploring", "vibing", "committing arson", "bartering", "singing to ABBA", "online",
                    "cooking", "fighting for their lives", "committing war crimes", "exploring", "hunting", "baking",
                    "trying not to explode", "sometimes exploding", "dungeon hunting", "flying around the place",
-                   "looking at the wildlife", "talking to Humphrey"]
+                   "talking to Humphrey", "hiding from Moth", ""]
 
     description = f"{players['current']}/{players['max']} People {random.choice(randomwords)}!"
 
