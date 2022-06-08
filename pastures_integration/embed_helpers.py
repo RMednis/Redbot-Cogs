@@ -112,7 +112,8 @@ async def online_players(ip, key, message):
     randomwords = ["building", "exploring", "vibing", "committing arson", "bartering", "singing to ABBA", "online",
                    "cooking", "fighting for their lives", "committing war crimes", "exploring", "hunting", "baking",
                    "trying not to explode", "sometimes exploding", "dungeon hunting", "flying around the place",
-                   "talking to Humphrey", "hiding from Moth", ""]
+                   "talking to Humphrey", "hiding from Moth", "bowing down to King", "going kablooey",
+                   "building a city"]
 
     description = f"{players['current']}/{players['max']} People {random.choice(randomwords)}!"
 
