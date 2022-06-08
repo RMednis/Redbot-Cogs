@@ -1,8 +1,10 @@
-from mcrcon import MCRcon
-from mcrcon import MCRconException
+import logging
+import aiomcrcon
+
 from mojang import MojangAPI
 from mojang.api import MojangError
 
+log = logging.getLogger("red.mednis-cogs.pastures_integration")
 
 # Functions for dealing with player data
 async def player_count(response_string: str):
@@ -22,8 +24,6 @@ async def player_count(response_string: str):
 
     else:
         players = ["None"]
-
-
 
     return {
         "current": current_players,
@@ -82,29 +82,34 @@ async def whitelisted_players(response_string: str):
 
 
 # Function to check if player has been whitelisted/un-whitelisted successfully!
-async def whitelist_success(response_string:str):
+async def whitelist_success(response_string: str):
     if response_string.startswith("Added"):
         return True
     else:
         return False
 
 
-async def whitelist_remove_success(response_string:str):
+async def whitelist_remove_success(response_string: str):
     if response_string.startswith("Removed"):
         return True
     else:
         return False
 
 
-# Main RCON Command Execution Function!
+# Async Wrapper Function
 async def run_rcon_command(ip: str, key: str, command: str):
+    client = aiomcrcon.Client(ip, 25575, key)
+
     try:
-        with MCRcon(ip, key) as rcon:
-            try:
-                response = rcon.command(command)
-                rcon.disconnect()
-            except (ConnectionResetError, ConnectionAbortedError):
-                raise RuntimeError("Error Connecting to server!")
-            return response
-    except (ConnectionRefusedError, MCRconException):
-        raise RuntimeError("Error Connecting to server!")
+        await client.connect()
+    except (aiomcrcon.RCONConnectionError, aiomcrcon.IncorrectPasswordError):
+        raise RuntimeError("Error connecting to server!")
+
+    try:
+        response = await client.send_cmd(command)
+
+    except aiomcrcon.ClientNotConnectedError:
+        raise RuntimeError("Error connecting to server!")
+
+    await client.close()
+    return response[0]

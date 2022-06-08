@@ -23,3 +23,14 @@ _This cog isn't really meant for public consumption, all the branding is current
     - `embed` - Controls the live-updating persistent embed
       - `add` - Post an embed to a channel! (Add the channel name with #<channel>)
       - `remove` - Removes the embed and stops live updating
+
+## Setup
+Add the repository: ``[!]repo add Mednis-Cogs https://github.com/RMednis/Redbot-Cogs``
+
+Install the dependencies: 
+``[!]pipinstall mojang``, ``[!]pipinstall aio-mc-rcon``
+
+Install the cog: ``[!]cog install Mednis-Cogs pastures_integration``
+
+Load the cog: ``[!]load pastures_integration``
+
