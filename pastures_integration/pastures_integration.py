@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-
 from discord.ext import tasks
 from typing import Literal
 
@@ -40,7 +39,11 @@ class PasturesIntegration(commands.Cog):
             "whitelisted_role": "",
             "moderation_role": "",
             "logging_channel": "",
-            "whitelist_channel": "",
+
+            # One Click Whitelisting
+            "reaction_channel": "",
+            "reaction_emote": "",
+            "reaction_embed_id": "",
 
             # Data for Rcon
             "host": "",
@@ -79,8 +82,11 @@ class PasturesIntegration(commands.Cog):
             key = await guild_config.apikey()
 
             if (channel_id != "") and (message_id != ""):
+
                 if (ip != "") and (key != ""):
+
                     embed = await embed_helpers.online_players(ip, key, "_This message updates every minute! :watch:_")
+
                     try:
                         channel = guild.get_channel(channel_id)
                         message = await channel.fetch_message(message_id)
@@ -97,13 +103,14 @@ class PasturesIntegration(commands.Cog):
                         log.error("Error editing message: ", HttpErr)
 
     @commands.group(autohelp=True, aliases=["pst"])
+    @commands.guild_only()
     @commands.mod_or_permissions(manage_guild=True)
     async def pastures(self, ctx):
         """Discord integration for greener pastures
 
         Automagic whitelisting, currently online player notifications, and more! (tm)
 
-        **Version:** `1.1.0`
+        **Version:** `1.3.0`
         _Made with <3 by Mednis!_
         """
 
@@ -189,13 +196,32 @@ class PasturesIntegration(commands.Cog):
                     message = await channel.fetch_message(message_id)
                     await message.delete()
                 except (discord.errors.NotFound, AttributeError):
-                    await ctx.send("**Persistent message or channel allready deleted!**")
+                    await ctx.send("**Persistent message or channel already deleted!**")
 
                 await guild_config.persistent_message.set("")
             await guild_config.persistent_channel.set("")
 
         if msg:
             await ctx.send("**Persistent message removed!**")
+
+    @pastures.command(name="ping")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def ping(self, ctx):
+        """"Ping the server and check for command execution times!"""
+
+        guild_config = self.config.guild(ctx.guild)
+        ip = await guild_config.host()
+        key = await guild_config.apikey()
+
+        # Placeholder
+        tmp_embed = embed_helpers.customEmbed(title="Server Ping Status",
+                                              description="Please wait while I gather all the necessary data!",
+                                              timestamp=datetime.datetime.utcnow(), colour=0x202020).pastures_footer()
+        message = await ctx.send(embed=tmp_embed)
+
+        # Response
+        ping_embed = await embed_helpers.ping_embed(ip, key)
+        await message.edit(embed=ping_embed)
 
     @pastures.command(name="players")
     @commands.admin_or_permissions(manage_guild=True)
@@ -204,10 +230,13 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(ctx.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
+
+        # We just use the regular online player embed :)
         embed = await embed_helpers.online_players(ip, key, "_This message will not update!_")
+
         await ctx.send(embed=embed)
 
-    @config.group(name="whitelist", autohelp=True, aliases=["white"])
+    @config.group(name="whitelist", autohelp=True, aliases=["white", "allow", "allowlist"])
     @commands.admin()
     async def conf_whitelist(self, ctx):
         """Whitelist Settings"""
@@ -223,7 +252,7 @@ class PasturesIntegration(commands.Cog):
     @conf_whitelist.command(name="log")
     @commands.guildowner()
     async def whitelist_log(self, ctx, channel: discord.TextChannel):
-        """Select which role has permission to whitelist people!"""
+        """Select which channel whitelist changes will be logged to!"""
         guild_config = self.config.guild(ctx.guild)
         await guild_config.logging_channel.set(channel.id)
         await ctx.send(f"**Whitelist changes will be logged to `{channel}`**")

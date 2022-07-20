@@ -37,6 +37,34 @@ async def error_embed(title, error):
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
                        timestamp=datetime.datetime.utcnow(), colour=0x7BC950).pastures_footer()
 
+async def ping_embed(ip, key):
+    error = ""
+    data = ""
+
+    embed = customEmbed(title="Server Ping Status",
+                        description="Server response speed to RCON commands, this is done locally and does not "
+                                    "guarantee that the server is reachable from the outside",
+                        colour=0x7BC950,
+                        timestamp=datetime.datetime.utcnow()).pastures_footer()
+
+    try:
+        start_time = time.time()
+        data = await minecraft_helpers.run_rcon_command(ip, key, "list")
+        end_time = time.time()
+    except (RuntimeError, asyncio.TimeoutError) as err:
+        error = err
+        end_time = time.time()
+
+    time_delta = (datetime.datetime.fromtimestamp(end_time) - datetime.datetime.fromtimestamp(start_time)).total_seconds() * 1000
+
+    if not error:
+        embed.add_field(name=f"Server status: ✅", value=f"Ping time **{time_delta} ms**", inline=False)
+        embed.add_field(name="Data", value=f"``{data}``")
+    else:
+        embed.add_field(name="Server status: ❌", value=f"Ping time **{time_delta} ms**")
+        embed.add_field(name="Error", value=f"``{error}``")
+
+    return embed
 
 async def reaction_embed():
 
