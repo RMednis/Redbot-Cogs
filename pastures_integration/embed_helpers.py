@@ -148,7 +148,7 @@ async def online_players(ip, key, message):
                    "cooking", "fighting for their lives", "committing war crimes", "exploring", "hunting", "baking",
                    "trying not to explode", "sometimes exploding", "dungeon hunting", "flying around the place",
                    "talking to Humphrey", "hiding from Moth", "bowing down to King", "going kablooey",
-                   "building a city"]
+                   "building a city", "exploring the end", "running from Samus", "trading with Gen", "farming with Luke"]
 
     description = f"{players['current']}/{players['max']} People {random.choice(randomwords)}!"
 
