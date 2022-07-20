@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import logging
 import random
-
+import time
 import discord
 
 from pastures_integration import minecraft_helpers
@@ -16,7 +16,7 @@ logo = "https://file.mednis.network/static_assets/main-logo-mini.png"
 
 class customEmbed(discord.Embed):
     def pastures_footer(self):
-        return self.set_footer(text="GP Logger 1.2", icon_url=logo)
+        return self.set_footer(text="GP Logger 1.3", icon_url=logo)
 
     def pastures_thumbnail(self):
         return self.set_thumbnail(url=logo)
@@ -27,6 +27,13 @@ class customEmbed(discord.Embed):
 
 
 async def error_embed(title, error):
+
+    if not title:
+        title = "Error"
+
+    if not error:
+        error = "Connection/Server error! Trying again :D"
+
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
                        timestamp=datetime.datetime.utcnow(), colour=0x7BC950).pastures_footer()
 
