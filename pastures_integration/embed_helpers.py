@@ -51,8 +51,11 @@ async def ping_embed(ip, key):
         start_time = time.time()
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
         end_time = time.time()
-    except (RuntimeError, asyncio.TimeoutError) as err:
+    except (RuntimeError) as err:
         error = err
+        end_time = time.time()
+    except asyncio.TimeoutError:
+        error = "Network/Server timeout! (Response took >2 seconds)"
         end_time = time.time()
 
     time_delta = (datetime.datetime.fromtimestamp(end_time) - datetime.datetime.fromtimestamp(start_time)).total_seconds() * 1000
