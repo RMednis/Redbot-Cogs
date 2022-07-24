@@ -28,10 +28,10 @@ class customEmbed(discord.Embed):
 
 async def error_embed(title, error):
 
-    if not title:
+    if title is "":
         title = "Error"
 
-    if not error:
+    if error is "":
         error = "Connection/Server error! Trying again :D"
 
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
@@ -139,8 +139,11 @@ async def whitelist_add(ip, key, username: str):
 async def online_players(ip, key, message):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
-    except (RuntimeError, asyncio.TimeoutError) as err:
+    except RuntimeError as err:
         return await error_embed("Problem Connecting to server!", err)
+
+    except asyncio.TimeoutError:
+        return await error_embed("Problem Connecting to server!", "Network timeout error!")
 
     players = await minecraft_helpers.player_count(data)
 
