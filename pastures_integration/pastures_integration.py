@@ -131,7 +131,7 @@ class PasturesIntegration(commands.Cog):
         """
 
     @pastures.group(autohelp=True, aliases=["cfg"])
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def config(self, ctx):
         """
         Configure pastures integration settings!
@@ -139,7 +139,7 @@ class PasturesIntegration(commands.Cog):
         """
 
     @config.command(name="creds")
-    @commands.guildowner()
+    @commands.admin()
     async def creds(self, ctx, address, key):
         """Server Connection Credentials
         _100% Mednis Only Zone!_
@@ -156,7 +156,7 @@ class PasturesIntegration(commands.Cog):
         await ctx.send("**Credentials have been saved!**")
 
     @config.command(name="clear")
-    @commands.guildowner()
+    @commands.admin()
     async def clear(self, ctx):
         """Clears stored credentials
         """
@@ -176,7 +176,7 @@ class PasturesIntegration(commands.Cog):
         """
 
     @embed.command(name="add")
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def embed_add(self, ctx, channel_input: discord.TextChannel):
         """Add a persistant notification
         **channel** - The channel where the notification should be posted!
@@ -201,7 +201,7 @@ class PasturesIntegration(commands.Cog):
         await guild_config.persistent_message.set(message.id)
 
     @embed.command(name="remove")
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def embed_remove(self, ctx, msg=True):
         """Removes the persistent notification"""
         guild_config = self.config.guild(ctx.guild)
@@ -224,7 +224,7 @@ class PasturesIntegration(commands.Cog):
             await ctx.send("**Persistent message removed!**")
 
     @embed.command(name="colour")
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def emded_color(self, ctx, colour=""):
         """ Set/Show the embed color!
         """
@@ -243,7 +243,7 @@ class PasturesIntegration(commands.Cog):
                 await ctx.send(f"Entered value is not a valid HEX colour code!")
 
     @embed.command(name="image")
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def embed_image(self, ctx, url=""):
         """ Set the thumbnail image for the embed!
         """
@@ -257,7 +257,7 @@ class PasturesIntegration(commands.Cog):
             await ctx.send(f"Current image set to `{url}`")
 
     @embed.command(name="title")
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def embed_title(self, ctx, *, title=""):
         """ Set the title for the embed!
         """
@@ -271,7 +271,7 @@ class PasturesIntegration(commands.Cog):
             await ctx.send(f"Embed title set to `{title}`")
 
     @embed.command(name="message")
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def embed_message(self, ctx):
         """ Set the embed player text messages!
         """
