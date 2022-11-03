@@ -168,7 +168,7 @@ class PasturesIntegration(commands.Cog):
         await ctx.send("**Credentials cleared**")
 
     @config.group(autohelp=True, aliases=["emb"])
-    @commands.admin()
+    @commands.admin_or_permissions(manage_guild=True)
     async def embed(self, ctx):
         """
         Configure persistent embed settings!
