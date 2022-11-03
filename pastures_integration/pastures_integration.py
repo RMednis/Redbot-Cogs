@@ -2,7 +2,6 @@ import datetime
 import io
 import json
 import logging
-import string
 from json import JSONDecodeError
 
 from discord.ext import tasks
@@ -339,7 +338,8 @@ class PasturesIntegration(commands.Cog):
         words = await guild_config.embed_strings()
 
         # We just use the regular online player embed :)
-        embed = await embed_helpers.online_players(ip, key, "_This message will not update!_", color, image, text, words)
+        embed = await embed_helpers.online_players(ip, key, "_This message will not update!_", color, image, text,
+                                                   words)
 
         await ctx.send(embed=embed)
 
@@ -409,9 +409,10 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(ctx.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
+        color = await guild_config.embed_colour()
         role_id = await guild_config.moderation_role()
         role = ctx.guild.get_role(role_id)
 
         if role in ctx.author.roles:
-            embed = await embed_helpers.whitelist_list(ip, key)
+            embed = await embed_helpers.whitelist_list(ip, key, color)
             await ctx.send(embed=embed)
