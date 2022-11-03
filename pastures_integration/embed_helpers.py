@@ -25,7 +25,6 @@ class customEmbed(discord.Embed):
 
 
 async def error_embed(title, error, colour):
-
     if title == "":
         title = "Error"
 
@@ -35,13 +34,15 @@ async def error_embed(title, error, colour):
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
                        timestamp=datetime.datetime.utcnow(), colour=colour).pastures_footer()
 
+
 async def ping_embed(ip, key):
     error = ""
     data = ""
 
     embed = customEmbed(title="Server Ping Status",
                         description="Server response speed to RCON commands, this is done locally and does not "
-                                    "guarantee that the server is reachable from the outside",
+                                    "guarantee that the server is reachable from the outside"
+                                    f"**Server IP: {ip}",
                         colour=0x7BC950,
                         timestamp=datetime.datetime.utcnow()).pastures_footer()
 
@@ -56,7 +57,8 @@ async def ping_embed(ip, key):
         error = "Network/Server timeout! (Response took >2 seconds)"
         end_time = time.time()
 
-    time_delta = (datetime.datetime.fromtimestamp(end_time) - datetime.datetime.fromtimestamp(start_time)).total_seconds() * 1000
+    time_delta = (datetime.datetime.fromtimestamp(end_time) - datetime.datetime.fromtimestamp(
+        start_time)).total_seconds() * 1000
 
     if not error:
         embed.add_field(name=f"Server status: ✅", value=f"Ping time **{time_delta} ms**", inline=False)
@@ -67,13 +69,14 @@ async def ping_embed(ip, key):
 
     return embed
 
-async def reaction_embed():
 
+async def reaction_embed():
     return customEmbed(title="Reaction setup!",
                        description="React to this message with the emote(s) you wish to be used for one-click "
                                    "whitelisting!",
-                       colour=0x7BC950)\
+                       colour=0x7BC950) \
         .pastures_footer()
+
 
 # The actual embeds we post in situations!
 async def whitelist_list(ip, key, color):
