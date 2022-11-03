@@ -18,8 +18,8 @@ class customEmbed(discord.Embed):
     def pastures_footer(self):
         return self.set_footer(text="GP Logger 1.3.1", icon_url=logo)
 
-    def pastures_thumbnail(self):
-        return self.set_thumbnail(url=logo)
+    def pastures_thumbnail(self, image=logo):
+        return self.set_thumbnail(url=image)
 
     def embed_caller(self, user: discord.Member):
         self.add_field(name="_Performed by:_", value=user.display_name)
@@ -28,10 +28,10 @@ class customEmbed(discord.Embed):
 
 async def error_embed(title, error):
 
-    if title is "":
+    if title == "":
         title = "Error"
 
-    if error is "":
+    if error == "":
         error = "Connection/Server error! Trying again :D"
 
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
@@ -78,7 +78,7 @@ async def reaction_embed():
         .pastures_footer()
 
 # The actual embeds we post in situations!
-async def whitelist_list(ip, key):
+async def whitelist_list(ip, key, color):
     try:
         response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist list")
         players = await minecraft_helpers.whitelisted_players(response)
@@ -91,7 +91,7 @@ async def whitelist_list(ip, key):
     embed = customEmbed(title="Whitelist",
                         description=description,
                         timestamp=datetime.datetime.utcnow(),
-                        colour=0x7BC950) \
+                        colour=color) \
         .pastures_footer()
 
     player_name_string = ""
@@ -139,7 +139,7 @@ async def whitelist_add(ip, key, username: str):
     return embed
 
 
-async def online_players(ip, key, message):
+async def online_players(ip, key, message, color, image, text, words):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
     except RuntimeError as err:
@@ -150,20 +150,14 @@ async def online_players(ip, key, message):
 
     players = await minecraft_helpers.player_count(data)
 
-    randomwords = ["building", "exploring", "vibing", "committing arson", "bartering", "singing to ABBA", "online",
-                   "cooking", "fighting for their lives", "committing war crimes", "exploring", "hunting", "baking",
-                   "trying not to explode", "sometimes exploding", "dungeon hunting", "flying around the place",
-                   "talking to Humphrey", "hiding from Moth", "bowing down to King", "going kablooey",
-                   "building a city", "exploring the end", "running from Samus", "trading with Gen", "farming with Luke"]
+    description = f"{players['current']}/{players['max']} People {random.choice(words)}!"
 
-    description = f"{players['current']}/{players['max']} People {random.choice(randomwords)}!"
-
-    embed = customEmbed(title="Greener Pastures Server Status",
+    embed = customEmbed(title=text,
                         description=description,
                         timestamp=datetime.datetime.utcnow(),
-                        colour=0x7BC950) \
+                        colour=color) \
         .pastures_footer() \
-        .pastures_thumbnail()
+        .pastures_thumbnail(image)
 
     player_name_string = ""
     for name in players["names"]:

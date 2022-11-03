@@ -1,5 +1,9 @@
 import datetime
+import io
+import json
 import logging
+import string
+from json import JSONDecodeError
 
 from discord.ext import tasks
 from typing import Literal
@@ -39,6 +43,13 @@ class PasturesIntegration(commands.Cog):
             "whitelisted_role": "",
             "moderation_role": "",
             "logging_channel": "",
+
+            # Embed customization
+            "embed_colour": 0x7BC950,
+            "embed_image": "https://file.mednis.network/static_assets/main-logo-mini.png",
+            "embed_title": "Greener Pastures Server Status",
+            "embed_strings": ["building", "exploring", "vibing", "committing arson", "bartering", "singing to ABBA",
+                              "online"],
 
             # One Click Whitelisting
             "reaction_channel": "",
@@ -81,11 +92,17 @@ class PasturesIntegration(commands.Cog):
             ip = await guild_config.host()
             key = await guild_config.apikey()
 
+            image = await guild_config.embed_image()
+            color = await guild_config.embed_colour()
+            text = await guild_config.embed_title()
+            words = await guild_config.embed_strings()
+
             if (channel_id != "") and (message_id != ""):
 
                 if (ip != "") and (key != ""):
 
-                    embed = await embed_helpers.online_players(ip, key, "_This message updates every minute! :watch:_")
+                    embed = await embed_helpers.online_players(ip, key, "_This message updates every minute! :watch:_",
+                                                               color, image, text, words)
 
                     try:
                         channel = guild.get_channel(channel_id)
@@ -168,11 +185,14 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(ctx.guild)
         await self.embed_remove(ctx, False)
 
+        image = await guild_config.embed_image()
+        color = await guild_config.embed_color()
+
         # Placeholder message!
         embed = embed_helpers.customEmbed(title="Greener Pastures Server Status",
                                           description=f":orange_circle: Please wait while we gather server info!",
-                                          timestamp=datetime.datetime.utcnow(), colour=0x7BC950
-                                          ).pastures_footer().pastures_thumbnail()
+                                          timestamp=datetime.datetime.utcnow(), colour=color,
+                                          ).pastures_footer().pastures_thumbnail(image=image)
 
         # Post the placeholder!
         message = await channel_input.send(embed=embed)
@@ -204,10 +224,92 @@ class PasturesIntegration(commands.Cog):
         if msg:
             await ctx.send("**Persistent message removed!**")
 
+    @embed.command(name="colour")
+    @commands.admin()
+    async def emded_color(self, ctx, colour=""):
+        """ Set/Show the embed color!
+        """
+        guild_config = self.config.guild(ctx.guild)
+
+        if colour == "":
+            colour = await guild_config.embed_colour()
+            await ctx.send(f"Current embed colour: `{colour}`")
+        else:
+            try:
+                color = colour.lstrip('#')
+                await guild_config.embed_colour.set(int(color, 16))
+                await ctx.send(f"Embed colour set to: `{colour}`")
+
+            except ValueError:
+                await ctx.send(f"Entered value is not a valid HEX colour code!")
+
+    @embed.command(name="image")
+    @commands.admin()
+    async def embed_image(self, ctx, url=""):
+        """ Set the thumbnail image for the embed!
+        """
+        guild_config = self.config.guild(ctx.guild)
+
+        if url == "none":
+            url = await guild_config.embed_image()
+            await ctx.send(f"Current embed image url: `{url}`")
+        else:
+            await guild_config.embed_image.set(url)
+            await ctx.send(f"Current image set to `{url}`")
+
+    @embed.command(name="title")
+    @commands.admin()
+    async def embed_title(self, ctx, title=""):
+        """ Set the title for the embed!
+        """
+        guild_config = self.config.guild(ctx.guild)
+
+        if title == "":
+            title = await guild_config.embed_title()
+            await ctx.send(f"Current embed title: `{title}`")
+        else:
+            await guild_config.embed_title.set(title)
+            await ctx.send(f"Embed title set to `{title}`")
+
+    @embed.command(name="message")
+    @commands.admin()
+    async def embed_message(self, ctx):
+        """ Set the embed player text messages!
+        """
+        guild_config = self.config.guild(ctx.guild)
+
+        if not ctx.message.attachments:
+            messages = await guild_config.embed_strings()
+
+            json_data = {"messages": messages}
+            json_test = json.dumps(json_data, indent=4)
+
+            log.info(json_test)
+            json_file = io.BytesIO(json_test.encode())
+
+            file = discord.File(fp=json_file, filename="embed_messages.json")
+
+            await ctx.send(file=file, content=f"Current embed player online messages attached to this file! \n"
+                           f"*Edit them, then re-run this command with the edited file attached! :D*")
+        else:
+            log.info(ctx.message.attachments[0].content_type)
+            if "application/json" in ctx.message.attachments[0].content_type:
+                try:
+                    file_object = await ctx.message.attachments[0].read()
+                    json_string = json.loads(file_object)
+
+                    await guild_config.embed_strings.set(json_string["messages"])
+                    await ctx.send("Embed messages saved! :D")
+                except JSONDecodeError:
+                    await ctx.send("Error reading file, make sure it's a valid `.json` file with a `messages` array!!")
+
+            else:
+                await ctx.send("The attached file is not a `.json` file!")
+
     @pastures.command(name="ping")
     @commands.admin_or_permissions(manage_guild=True)
     async def ping(self, ctx):
-        """"Ping the server and check for command execution times!"""
+        """Ping the server and check for command execution times!"""
 
         guild_config = self.config.guild(ctx.guild)
         ip = await guild_config.host()
@@ -231,8 +333,13 @@ class PasturesIntegration(commands.Cog):
         ip = await guild_config.host()
         key = await guild_config.apikey()
 
+        image = await guild_config.embed_image()
+        color = await guild_config.embed_colour()
+        text = await guild_config.embed_title()
+        words = await guild_config.embed_strings()
+
         # We just use the regular online player embed :)
-        embed = await embed_helpers.online_players(ip, key, "_This message will not update!_")
+        embed = await embed_helpers.online_players(ip, key, "_This message will not update!_", color, image, text, words)
 
         await ctx.send(embed=embed)
 
@@ -308,5 +415,3 @@ class PasturesIntegration(commands.Cog):
         if role in ctx.author.roles:
             embed = await embed_helpers.whitelist_list(ip, key)
             await ctx.send(embed=embed)
-
-
