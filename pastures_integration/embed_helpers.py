@@ -41,8 +41,8 @@ async def ping_embed(ip, key):
 
     embed = customEmbed(title="Server Ping Status",
                         description="Server response speed to RCON commands, this is done locally and does not "
-                                    "guarantee that the server is reachable from the outside"
-                                    f"**Server IP: {ip}",
+                                    "guarantee that the server is reachable from the outside!"
+                                    f"\n**Server IP:** `{ip}`",
                         colour=0x7BC950,
                         timestamp=datetime.datetime.utcnow()).pastures_footer()
 
