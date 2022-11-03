@@ -7,8 +7,6 @@ import discord
 
 from pastures_integration import minecraft_helpers
 
-from redbot.core.bot import Red
-
 log = logging.getLogger("red.mednis-cogs.pastures_integration")
 
 logo = "https://file.mednis.network/static_assets/main-logo-mini.png"
@@ -26,7 +24,7 @@ class customEmbed(discord.Embed):
         return
 
 
-async def error_embed(title, error):
+async def error_embed(title, error, colour):
 
     if title == "":
         title = "Error"
@@ -35,7 +33,7 @@ async def error_embed(title, error):
         error = "Connection/Server error! Trying again :D"
 
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
-                       timestamp=datetime.datetime.utcnow(), colour=0x7BC950).pastures_footer()
+                       timestamp=datetime.datetime.utcnow(), colour=colour).pastures_footer()
 
 async def ping_embed(ip, key):
     error = ""
@@ -143,10 +141,10 @@ async def online_players(ip, key, message, color, image, text, words):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
     except RuntimeError as err:
-        return await error_embed("Problem Connecting to server!", err)
+        return await error_embed("Problem Connecting to server!", err, color)
 
     except asyncio.TimeoutError:
-        return await error_embed("Problem Connecting to server!", "Network timeout error!")
+        return await error_embed("Problem Connecting to server!", "Network timeout error!", color)
 
     players = await minecraft_helpers.player_count(data)
 

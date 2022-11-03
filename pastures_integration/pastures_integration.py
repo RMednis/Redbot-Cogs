@@ -258,7 +258,7 @@ class PasturesIntegration(commands.Cog):
 
     @embed.command(name="title")
     @commands.admin()
-    async def embed_title(self, ctx, title=""):
+    async def embed_title(self, ctx, *, title=""):
         """ Set the title for the embed!
         """
         guild_config = self.config.guild(ctx.guild)
