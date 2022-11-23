@@ -24,7 +24,7 @@ class customEmbed(discord.Embed):
         return
 
 
-async def error_embed(title, error, colour):
+async def error_embed(title, error, colour=0xe74c3c):
     if title == "":
         title = "Error"
 
@@ -50,7 +50,7 @@ async def ping_embed(ip, key):
         start_time = time.time()
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
         end_time = time.time()
-    except (RuntimeError) as err:
+    except RuntimeError as err:
         error = err
         end_time = time.time()
     except asyncio.TimeoutError:
