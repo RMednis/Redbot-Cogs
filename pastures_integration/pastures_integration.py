@@ -128,7 +128,7 @@ class PasturesIntegration(commands.Cog):
 
         Automagic whitelisting, currently online player notifications, and more! (tm)
 
-        **Version:** `1.3.0`
+        **Version:** `1.3.3`
         _Made with <3 by Mednis!_
         """
 

@@ -14,7 +14,7 @@ logo = "https://file.mednis.network/static_assets/main-logo-mini.png"
 
 class customEmbed(discord.Embed):
     def pastures_footer(self):
-        return self.set_footer(text="GP Logger 1.3.1", icon_url=logo)
+        return self.set_footer(text="GP Logger 1.3.3", icon_url=logo)
 
     def pastures_thumbnail(self, image=logo):
         return self.set_thumbnail(url=image)
