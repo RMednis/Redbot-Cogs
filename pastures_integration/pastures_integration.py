@@ -9,9 +9,11 @@ from typing import Literal
 
 import discord
 from redbot.core import commands
+
 from redbot.core.bot import Red
 from redbot.core.config import Config
 from redbot.core.utils import AsyncIter
+
 
 from pastures_integration import embed_helpers
 
@@ -185,7 +187,7 @@ class PasturesIntegration(commands.Cog):
         await self.embed_remove(ctx, False)
 
         image = await guild_config.embed_image()
-        color = await guild_config.embed_color()
+        color = await guild_config.embed_colour()
 
         # Placeholder message!
         embed = embed_helpers.customEmbed(title="Greener Pastures Server Status",
@@ -289,7 +291,7 @@ class PasturesIntegration(commands.Cog):
             file = discord.File(fp=json_file, filename="embed_messages.json")
 
             await ctx.send(file=file, content=f"Current embed player online messages attached to this file! \n"
-                           f"*Edit them, then re-run this command with the edited file attached! :D*")
+                                              f"*Edit them, then re-run this command with the edited file attached! :D*")
         else:
             log.info(ctx.message.attachments[0].content_type)
             if "application/json" in ctx.message.attachments[0].content_type:
