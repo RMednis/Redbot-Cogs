@@ -1,7 +1,7 @@
 import logging
 import aiomcrcon
 
-from mojang import MojangAPI
+from mojang import API
 from mojang.api import MojangError
 
 log = logging.getLogger("red.mednis-cogs.pastures_integration")
@@ -35,10 +35,10 @@ async def player_count(response_string: str):
 # Functions for dealing with username resolution
 async def check_name(input: str):
     try:
-        uuid = MojangAPI.get_uuid(input)
+        uuid = API.get_uuid(input)
         if not uuid:
             raise RuntimeError(f"Could not find user `{input}` from mojang!")
-        return MojangAPI.get_username(uuid)
+        return API.get_username(uuid)
     except MojangError:
         raise RuntimeError(f"Error connecting to mojang api!")
 
