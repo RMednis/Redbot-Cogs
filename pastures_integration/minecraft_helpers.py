@@ -33,12 +33,12 @@ async def player_count(response_string: str):
 
 
 # Functions for dealing with username resolution
-async def check_name(input: str):
+async def check_name(self, input: str):
     try:
-        uuid = API.get_uuid(input)
+        uuid = API.get_uuid(self, input)
         if not uuid:
             raise RuntimeError(f"Could not find user `{input}` from mojang!")
-        return API.get_username(uuid)
+        return API.get_username(self, uuid)
     except MojangError:
         raise RuntimeError(f"Error connecting to mojang api!")
 
