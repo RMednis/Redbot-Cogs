@@ -16,7 +16,7 @@ async def generate_tts(self, message: discord.Message):
 
     else:
         if await self.config.guild(message.guild).say_name():
-            user = message.author.display_name
+            user = message.author.nick or message.author.display_name
             text = f"{user} says {text}"
 
     voice = await self.config.user(message.author).voice()
