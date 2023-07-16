@@ -13,14 +13,18 @@ async def skip_tts(self):
     if self.llplayer is not None:
         player = self.llplayer
         current_track = player.current
-        if current_track.track_identifier in self.tts_queue:
-            player.skip()
-            await delete_file_and_remove(current_track.track_identifier)
 
+        if current_track is not None:
+            if current_track.track_identifier in self.tts_queue:
+                player.skip()
+                await delete_file_and_remove(current_track.track_identifier)
+            else:
+                raise RuntimeError("No TTS message is playing currently!")
         else:
             raise RuntimeError("No TTS message is playing currently!")
     else:
         raise RuntimeError("Could not connect to voice server or `(lavalink)`!")
+
 
 async def play_audio(self, vc: discord.VoiceChannel, file_path):
     if self.llplayer is None:
