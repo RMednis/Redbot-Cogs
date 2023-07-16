@@ -16,8 +16,12 @@ async def generate_tts(self, message: discord.Message):
 
     else:
         if await self.config.guild(message.guild).say_name():
-            user = message.author.nick or message.author.display_name
-            text = f"{user} says {text}"
+            if message.author.nick != "":
+                name = message.author.nick
+            else:
+                name = message.author.display_name
+
+            text = f"{name} says {text}"
 
     voice = await self.config.user(message.author).voice()
     file_path = await file_manager.download_audio(self, voice, text)
@@ -59,7 +63,12 @@ async def mention_filter(self, text: str, guild: discord.Guild):
 
         # Replace the mention with the user's regular name
         if user:
-            text = text.replace(mention, f"to {user.display_name}")
+            if user.nick:
+                name = user.nick
+            else:
+                name = user.display_name
+
+            text = text.replace(mention, f"to {name}")
 
     return text
 
