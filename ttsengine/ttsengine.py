@@ -203,7 +203,7 @@ class TTSEngine(commands.Cog):
         app_commands.Choice(name="Amy (🇬🇧)", value="Amy"),
         app_commands.Choice(name="Joey (🇺🇸)", value="Joey"),
         app_commands.Choice(name="Joanna (🇺🇸)", value="Joanna"),
-        app_commands.Choice(name="Disable ❌", value="none")
+        app_commands.Choice(name="Disable ❌", value="disable")
     ])
     @app_commands.guild_only()
     async def tts_voice(self, interaction: discord.Interaction, voice: app_commands.Choice[str]):
@@ -211,56 +211,75 @@ class TTSEngine(commands.Cog):
         Enable TTS for the current user.
         """
 
+        # Check if the user is blacklisted
         blacklist = await self.config.guild(interaction.guild).blacklisted_users()
         if interaction.user.id in blacklist:
             return
 
+        # Chack if User is not in a voice channel
         if interaction.user.voice is None:
             await interaction.response.send_message("You must be in a voice channel to use TTS. ❌", ephemeral=True)
             return
 
+        # If the user has TTS disabled
         if not await self.config.user(interaction.user).tts_enabled():
-            if voice.value == "none":
+            # If the user has disabled TTS and wants to disable it
+            if voice.value == "disable":
                 await interaction.response.send_message("TTS Was already disabled for you! ❌", ephemeral=False)
                 return
+            # Enable TTS for the user and set the voice
             else:
                 await self.config.user(interaction.user).voice.set(voice.value)
                 await self.config.user(interaction.user).tts_enabled.set(True)
 
-        if voice.value == "none":
-            self.config.user(interaction.user).tts_enabled.set(False)
-            await interaction.response.send_message("Disabled TTS! ❌", ephemeral=False)
-            return
-        else:
-            await self.config.user(interaction.user).voice.set(voice.value)
+                await interaction.response.send_message(f"You have enabled TTS and sound like `{voice.value}`. "
+                                                        f"Any messages you type in the voice channel text channels or no-mic"
+                                                        f" will be read out. ✅", ephemeral=True)
+                return
 
-        await interaction.response.send_message(f"You have enabled TTS and sound like `{voice.value}`. "
-                                                f"Any messages you type in the voice channel text channels or no-mic"
-                                                f" will be read out. ✅", ephemeral=True)
+        # If the user has TTS enabled
+        else:
+            # If the user has TTS enabled and wants to disable it
+            if voice.value == "disable":
+
+                self.config.user(interaction.user).tts_enabled.set(False)
+                await interaction.response.send_message("Disabled TTS! ❌", ephemeral=False)
+                return
+
+            # if the user has TTS enabled and wants to change the voice
+            else:
+                await self.config.user(interaction.user).voice.set(voice.value)
+                await interaction.response.send_message(f"You have changed your TTS voice to `{voice.value}`. "
+                                                        f"Any messages you type in the voice channel text channels or no-mic"
+                                                        f" will be read out. ✅", ephemeral=True)
+
+
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.guild is None:
             return
 
+        # If the channel is not whitelisted
         if message.channel.id not in await self.config.guild(message.guild).whitelisted_channels():
             log.info("Message not in whitelisted channel")
             return
 
+        # If the message author is blacklisted
         if message.author.id in await self.config.guild(message.guild).blacklisted_users():
             log.info("Message author is blacklisted")
             return
 
+        # If the message author has TTS enabled
         if await self.config.user(message.author).tts_enabled():
-            if message.author.voice is None:
-                await message.reply(
-                    "You have left a voice channel, TTS has been disabled for you.",
-                    delete_after=10
-                )
 
+            # If the user is not in a voice channel
+            if message.author.voice is None:
+                await message.reply("You have left a voice channel, TTS has been disabled for you.", delete_after=10)
                 await self.config.user(message.author).tts_enabled.set(False)
                 return
 
+            # Generate the TTS message and play it
             await tts_api.generate_tts(self, message)
 
     async def lavalink_events(self, player, event: lavalink.LavalinkEvents, extra):
