@@ -383,7 +383,7 @@ class PasturesIntegration(commands.Cog):
         role = ctx.guild.get_role(await guild_config.moderation_role())
 
         if role in ctx.author.roles:
-            embed = await embed_helpers.whitelist_add(ip, key, player_name)
+            embed = await embed_helpers.whitelist_add(self, ip, key, player_name)
             await ctx.send(embed=embed, delete_after=10)
 
     @whitelist.command(name="remove")
@@ -399,7 +399,7 @@ class PasturesIntegration(commands.Cog):
         role = ctx.guild.get_role(await guild_config.moderation_role())
 
         if role in ctx.author.roles:
-            embed = await embed_helpers.whitelist_remove(ip, key, player_name)
+            embed = await embed_helpers.whitelist_remove(self, ip, key, player_name)
             await ctx.send(embed=embed, delete_after=10)
 
     @whitelist.command(name="list")

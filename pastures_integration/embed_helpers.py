@@ -104,10 +104,10 @@ async def whitelist_list(ip, key, color):
     return embed
 
 
-async def whitelist_remove(ip, key, username: str):
+async def whitelist_remove(self, ip, key, username: str):
     try:
         username = username.lower()
-        name = await minecraft_helpers.check_name(username)
+        name = await minecraft_helpers.check_name(self, username)
         response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist remove {name}")
         if not await minecraft_helpers.whitelist_remove_success(response):
             raise RuntimeError(f"Player `{name}` was not whitelisted!")
@@ -122,7 +122,7 @@ async def whitelist_remove(ip, key, username: str):
     return embed
 
 
-async def whitelist_add(ip, key, username: str):
+async def whitelist_add(self, ip, key, username: str):
     try:
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
