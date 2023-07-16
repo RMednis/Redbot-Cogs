@@ -1,0 +1,21 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+    "name": "TTSEngine",
+    "short": "A text to speech engine that hooks into RedBot",
+    "description": "A long description of the cog.",
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "install_msg": "TTS Engine installed succesfully!",
+    "author": [
+        "Mednis"
+    ],
+    "required_cogs": {},
+    "requirements": [],
+    "tags": [
+        "Audio",
+        "TTS"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}

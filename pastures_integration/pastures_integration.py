@@ -8,7 +8,7 @@ from discord.ext import tasks
 from typing import Literal
 
 import discord
-from redbot.core import commands
+from redbot.core import commands, app_commands
 
 from redbot.core.bot import Red
 from redbot.core.config import Config
@@ -307,9 +307,8 @@ class PasturesIntegration(commands.Cog):
             else:
                 await ctx.send("The attached file is not a `.json` file!")
 
-    @pastures.command(name="ping")
-    @commands.admin_or_permissions(manage_guild=True)
-    async def ping(self, ctx):
+    @pastures.hybrid_command(name="ping")
+    async def ping(self, ctx: commands.Context):
         """Ping the server and check for command execution times!"""
 
         guild_config = self.config.guild(ctx.guild)
