@@ -307,7 +307,7 @@ class PasturesIntegration(commands.Cog):
             else:
                 await ctx.send("The attached file is not a `.json` file!")
 
-    @pastures.hybrid_command(name="ping")
+    @pastures.command(name="ping")
     async def ping(self, ctx: commands.Context):
         """Ping the server and check for command execution times!"""
 
