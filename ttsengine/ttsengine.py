@@ -273,9 +273,12 @@ class TTSEngine(commands.Cog):
             log.info("Message author is blacklisted")
             return
 
-        # If the message author has TTS enabled
-        if await self.config.user(message.author).tts_enabled():
+        # Does the message author have TTS enabled
+        tts_enabled = self.config.user(message.author).tts_enabled()
+        log.info(f"{message.author.display_name}: {tts_enabled}")
 
+        # If the message author has TTS enabled
+        if tts_enabled:
             # If the user is not in a voice channel
             if message.author.voice is None:
                 await message.reply("You have left a voice channel, TTS has been disabled for you.", delete_after=10)
