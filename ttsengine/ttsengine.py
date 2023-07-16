@@ -216,13 +216,16 @@ class TTSEngine(commands.Cog):
         if interaction.user.id in blacklist:
             return
 
-        # Chack if User is not in a voice channel
+        # Check if User is not in a voice channel
         if interaction.user.voice is None:
             await interaction.response.send_message("You must be in a voice channel to use TTS. ❌", ephemeral=True)
             return
 
+        # Check if the user has TTS enabled
+        tts_enabled = await self.config.user(interaction.user).tts_enabled()
+        log.info(f"{interaction.user.display_name}: {tts_enabled}")
         # If the user has TTS disabled
-        if not await self.config.user(interaction.user).tts_enabled():
+        if not tts_enabled:
             # If the user has disabled TTS and wants to disable it
             if voice.value == "disable":
                 await interaction.response.send_message("TTS Was already disabled for you! ❌", ephemeral=False)
@@ -232,7 +235,7 @@ class TTSEngine(commands.Cog):
                 await self.config.user(interaction.user).voice.set(voice.value)
                 await self.config.user(interaction.user).tts_enabled.set(True)
 
-                await interaction.response.send_message(f"You have enabled TTS and sound like `{voice.value}`. "
+                await interaction.response.send_message(f"You have enabled TTS and sound like `{voice.value}`. \n"
                                                         f"Any messages you type in the voice channel text channels or no-mic"
                                                         f" will be read out. ✅", ephemeral=True)
                 return
@@ -249,7 +252,7 @@ class TTSEngine(commands.Cog):
             # if the user has TTS enabled and wants to change the voice
             else:
                 await self.config.user(interaction.user).voice.set(voice.value)
-                await interaction.response.send_message(f"You have changed your TTS voice to `{voice.value}`. "
+                await interaction.response.send_message(f"You have changed your TTS voice to `{voice.value}`. \n"
                                                         f"Any messages you type in the voice channel text channels or no-mic"
                                                         f" will be read out. ✅", ephemeral=True)
 
