@@ -16,8 +16,9 @@ async def skip_tts(self):
 
         if current_track is not None:
             if current_track.track_identifier in self.tts_queue:
-                player.skip()
-                await delete_file_and_remove(current_track.track_identifier)
+                track = player.current
+                await player.skip()
+                await delete_file_and_remove(self, track)
             else:
                 raise RuntimeError("No TTS message is playing currently!")
         else:
@@ -84,11 +85,12 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path):
         await player.skip()
 
 
-async def delete_file_and_remove(self):
+async def delete_file_and_remove(self, track):
     log.info("Deleting tts track and removing it from the queue.")
     log.info(self.tts_queue)
 
     # If the track ended, delete the audio file.
-    await file_manager.delete_audio(self.tts_queue[0].uri)
+    await file_manager.delete_audio(track.uri)
+
     # Remove the track from the queue.
-    await self.tts_queue.pop(0)
+    self.tts_queue.remove(track.track_identifier)
