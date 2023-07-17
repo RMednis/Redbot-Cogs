@@ -62,9 +62,6 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path):
 
     log.info(player.current.track_identifier)
     if player.current.track_identifier in self.tts_queue:
-        log.info(
-            f"There is a TTS track playing, adding the new tts track to the queue at position  {len(self.tts_queue)}")
-
         # if we are already playing tts, add it to the audio queue
         player.queue.insert(len(self.tts_queue) - 1, track)
         # Then append it to the TTS queue
@@ -72,8 +69,6 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path):
         return
 
     else:
-        log.info("There is a non-tts track playing, stopping it and playing the tts track.")
-
         # If the player is playing something else, save the current track and position.
         last_non_tts_track = (player.current, player.position)
 
