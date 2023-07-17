@@ -81,6 +81,10 @@ async def link_filter(self, text: str):
 
     return text_without_links
 
+async def remove_characters(self, text: str):
+    # Slash command pauses the tts for a bit
+    return text.replace("/", " ")
+
 
 async def filter_message(self, text: discord.Message):
 
@@ -113,6 +117,9 @@ async def filter_message(self, text: discord.Message):
 
     # Remove links
     filtered = await link_filter(self, filtered)
+
+    # Remove characters that cause issues
+    filtered = await remove_characters(self, filtered)
 
     # Clear message if it is contains too long of a word
     if await long_word_filter(self, filtered, max_word_length):
