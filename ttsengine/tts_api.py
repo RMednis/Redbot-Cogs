@@ -10,6 +10,7 @@ log = logging.getLogger("red.mednis-cogs.poitranslator.text_filter")
 
 async def generate_tts(self, message: discord.Message):
     text = await filter_message(self, message)
+    track_name = f"TTS"
 
     if text == "":
         return
@@ -22,10 +23,12 @@ async def generate_tts(self, message: discord.Message):
                 name = message.author.display_name
 
             text = f"{name} says {text}"
+            track_name = f"TTS from {name}"
 
     voice = await self.config.user(message.author).voice()
     file_path = await file_manager.download_audio(self, voice, text)
-    await audio_manager.play_audio(self, message.author.voice.channel, file_path)
+
+    await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_name)
 
 
 

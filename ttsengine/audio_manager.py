@@ -27,7 +27,7 @@ async def skip_tts(self):
         raise RuntimeError("Could not connect to voice server or `(lavalink)`!")
 
 
-async def play_audio(self, vc: discord.VoiceChannel, file_path):
+async def play_audio(self, vc: discord.VoiceChannel, file_path, track_name = "TTS"):
     if self.llplayer is None:
         self.llplayer = await lavalink.connect(vc, self_deaf=True)
 
@@ -35,17 +35,28 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path):
     log.info(f"Tts queue length: {len(self.tts_queue)}")
 
     try:
-        response = (await player.load_tracks(file_path))
-    except RuntimeError:
-        self.llplayer = await lavalink.connect(vc, self_deaf=True)
-        player = self.llplayer
+        # Try and use our existing LavaLink client
         response = (await player.load_tracks(file_path))
 
+    except RuntimeError:
+        # LavaLink is not connected
+        self.llplayer = await lavalink.connect(vc, self_deaf=True)
+        player = self.llplayer
+
+        response = (await player.load_tracks(file_path))
+
+    # Response can theoretically give us multiple tracks... we only need one.
     if len(response.tracks) > 0:
+
         track = response.tracks[0]
     else:
+
         log.error(f"Could not load track {file_path}")
         return
+
+    # Set the track title to something sane, so we don't just leak the entire directory structure of whatever host the
+    # bot is running on
+    track.title = track_name
 
     # If the player is not playing anything, play the track.
     if player.current is None:
@@ -61,7 +72,7 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path):
         await player.play()
         return
 
-    log.info(player.current.track_identifier)
+    # Check if we are playing a TTS message already
     if player.current.track_identifier in self.tts_queue:
         # if we are already playing tts, add it to the audio queue
         player.queue.insert(len(self.tts_queue) - 1, track)
