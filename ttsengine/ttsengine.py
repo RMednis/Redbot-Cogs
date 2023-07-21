@@ -300,7 +300,13 @@ class TTSEngine(commands.Cog):
                     # The track that just started was not a tts track, pause it and seek to where it was before.
                     await player.pause()
                     await player.seek(self.last_non_tts_track[1])
-                    await player.pause(False)
+
+                    # Check if the track was paused before we played TTS
+                    if not self.last_non_tts_track[2]:
+                        # Unpause it if needed
+                        await player.pause(False)
+
+                    # Clear the non-tts track queue
                     self.last_non_tts_track = None
 
         if event == lavalink.LavalinkEvents.QUEUE_END:

@@ -71,7 +71,7 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path):
 
     else:
         # If the player is playing something else, save the current track and position.
-        last_non_tts_track = (player.current, player.position)
+        last_non_tts_track = (player.current, player.position, player.paused)
 
         self.tts_queue.append(track.track_identifier)  # Append the track to the TTS queue.
 
