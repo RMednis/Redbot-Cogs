@@ -52,6 +52,7 @@ class TTSEngine(commands.Cog):
             "max_message_length": 400,
             "max_word_length": 15,
             "repeated_word_percentage": 80,
+            "global_tts_volume": 100
         }
 
         self.config.register_guild(**default_guild)
@@ -197,6 +198,21 @@ class TTSEngine(commands.Cog):
                     await interaction.response.send_message(err)
 
     @app_commands.command()
+    @app_commands.guild_only()
+    async def tts_volume(self, interaction: discord.Interaction, volume: int):
+        """
+        Set the TTS volume.
+        """
+        if interaction.user.voice is not None:
+            blacklist = await self.config.guild(interaction.guild).blacklisted_users()
+            if interaction.user.id not in blacklist:
+                try:
+                    await self.config.guild(interaction.guild).global_tts_volume.set(volume)
+                    await interaction.response.send_message(f"Set global TTS volume to {volume}%!")
+                except RuntimeError as err:
+                    await interaction.response.send_message(err)
+
+    @app_commands.command()
     @app_commands.describe(voice="The TTS voice you wish to use.")
     @app_commands.choices(voice=[
         app_commands.Choice(name="Brian (🇬🇧)", value="Brian"),
@@ -300,6 +316,9 @@ class TTSEngine(commands.Cog):
                     # The track that just started was not a tts track, pause it and seek to where it was before.
                     await player.pause()
                     await player.seek(self.last_non_tts_track[1])
+
+                    # Set the player volume to the same as we had when playing the previous track
+                    await player.set_volume(self.last_non_tts_track[3])
 
                     # Check if the track was paused before we played TTS
                     if not self.last_non_tts_track[2]:

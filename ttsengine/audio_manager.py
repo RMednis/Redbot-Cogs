@@ -27,12 +27,11 @@ async def skip_tts(self):
         raise RuntimeError("Could not connect to voice server or `(lavalink)`!")
 
 
-async def play_audio(self, vc: discord.VoiceChannel, file_path, track_name = "TTS"):
+async def play_audio(self, vc: discord.VoiceChannel, file_path: str,  volume: int, track_name: str = "TTS"):
     if self.llplayer is None:
         self.llplayer = await lavalink.connect(vc, self_deaf=True)
 
     player = self.llplayer
-    log.info(f"Tts queue length: {len(self.tts_queue)}")
 
     try:
         # Try and use our existing LavaLink client
@@ -54,6 +53,8 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path, track_name = "TT
         log.error(f"Could not load track {file_path}")
         return
 
+    #log.info(f"Current Volume: {player.volume}")
+
     # Set the track title to something sane, so we don't just leak the entire directory structure of whatever host the
     # bot is running on
     track.title = track_name
@@ -67,6 +68,9 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path, track_name = "TT
 
         # Append the track to the TTS queue.
         self.tts_queue.append(track.track_identifier)
+
+        # Set the player volume to our global volume
+        await player.set_volume(volume)
 
         # Play the track.
         await player.play()
@@ -82,7 +86,7 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path, track_name = "TT
 
     else:
         # If the player is playing something else, save the current track and position.
-        last_non_tts_track = (player.current, player.position, player.paused)
+        last_non_tts_track = (player.current, player.position, player.paused, player.volume)
 
         self.tts_queue.append(track.track_identifier)  # Append the track to the TTS queue.
 
@@ -94,6 +98,9 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path, track_name = "TT
 
         # Skip the current track.
         await player.skip()
+
+        # Set the player volume to the TTS global volume
+        await player.set_volume(volume)
 
 
 async def delete_file_and_remove(self, track):

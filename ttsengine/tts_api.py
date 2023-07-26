@@ -8,9 +8,12 @@ from ttsengine import audio_manager, file_manager
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.text_filter")
 
+
 async def generate_tts(self, message: discord.Message):
     text = await filter_message(self, message)
     track_name = f"TTS"
+
+    track_volume = await self.config.guild(message.guild).global_tts_volume()
 
     if text == "":
         return
@@ -28,8 +31,7 @@ async def generate_tts(self, message: discord.Message):
     voice = await self.config.user(message.author).voice()
     file_path = await file_manager.download_audio(self, voice, text)
 
-    await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_name)
-
+    await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)
 
 
 async def repeated_word_filter(self, text: str):
@@ -47,6 +49,7 @@ async def repeated_word_filter(self, text: str):
 
     return repeating_word_percentage
 
+
 async def long_word_filter(self, text: str, length):
     words = text.split()
 
@@ -55,6 +58,8 @@ async def long_word_filter(self, text: str, length):
             return True
 
     return False
+
+
 async def mention_filter(self, text: str, guild: discord.Guild):
     mentions = re.findall(r"<@!?\d+>", text)
     for mention in mentions:
@@ -75,6 +80,7 @@ async def mention_filter(self, text: str, guild: discord.Guild):
 
     return text
 
+
 async def link_filter(self, text: str):
     # Regular expression pattern to match URLs
     url_pattern = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
@@ -84,22 +90,20 @@ async def link_filter(self, text: str):
 
     return text_without_links
 
+
 async def remove_characters(self, text: str):
     # Slash command pauses the tts for a bit
     return text.replace("/", " ")
 
 
 async def filter_message(self, text: discord.Message):
-
     # Config settings
     max_message_length = await self.config.guild(text.guild).max_message_length()
     max_word_length = await self.config.guild(text.guild).max_word_length()
     repeated_word_percentage = await self.config.guild(text.guild).repeated_word_percentage()
 
-
-
     filtered = text.content
-    log.info(f"Filtering message: {text}")
+    #log.info(f"Filtering message: {text}")
     # Remove random spaces
     filtered = filtered.strip()
 
@@ -111,7 +115,7 @@ async def filter_message(self, text: discord.Message):
         return ""
 
     # Clear mesaage if it contains too many repeated words
-    log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
+    #log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
     if await repeated_word_filter(self, filtered) > repeated_word_percentage:
         return ""
 
