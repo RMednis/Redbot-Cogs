@@ -35,8 +35,12 @@ async def generate_tts(self, message: discord.Message):
                 else:
                     text = f"{name} sends media"
         else:
-            # Regular message
-            text = f"{name} says {text}"
+            if text == "Link":
+                # Clobbered to Link
+                text = f"{name} sends link"
+            else:
+                # Regular message
+                text = f"{name} says {text}"
 
             if message.attachments:
                 log.info(message.attachments[0].content_type)
