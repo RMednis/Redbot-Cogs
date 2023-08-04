@@ -11,21 +11,41 @@ log = logging.getLogger("red.mednis-cogs.poitranslator.text_filter")
 
 async def generate_tts(self, message: discord.Message):
     text = await filter_message(self, message)
-    track_name = f"TTS"
+    track_name = "TTS"
 
     track_volume = await self.config.guild(message.guild).global_tts_volume()
 
-    if text == "":
-        return
+    if await self.config.guild(message.guild).say_name():
 
-    else:
-        if await self.config.guild(message.guild).say_name():
-            if message.author.nick:
-                name = message.author.nick
+        if message.author.nick:
+            # Take the server nickname as preferable
+            name = message.author.nick
+        else:
+            name = message.author.display_name
+
+        if text == "":
+            # Message doesn't contain text or it got clobbered
+            if not message.attachments:
+                return
             else:
-                name = message.author.display_name
+                media_type = message.attachments[0].content_type.split("/", 1)[0]
 
+                if media_type:
+                    text = f"{name} sends {media_type}"
+                else:
+                    text = f"{name} sends media"
+        else:
+            # Regular message
             text = f"{name} says {text}"
+
+            if message.attachments:
+                log.info(message.attachments[0].content_type)
+                media_type = message.attachments[0].content_type.split("/", 1)[0]
+                if media_type:
+                    text = text + f" with attached {media_type}"
+                else:
+                    text = text + " with attached media"
+
             track_name = f"TTS from {name}"
 
     voice = await self.config.user(message.author).voice()
@@ -83,6 +103,11 @@ async def mention_filter(self, text: str, guild: discord.Guild):
 
     return text
 
+async def emoji_textifier(self, text: str):
+    emote_pattern = r'<a?:(\w+):\d+>'
+    text = re.sub(emote_pattern, lambda match: match.group(1), text)
+
+    return text
 
 async def link_filter(self, text: str):
     # Regular expression pattern to match URLs
@@ -106,7 +131,7 @@ async def filter_message(self, text: discord.Message):
     repeated_word_percentage = await self.config.guild(text.guild).repeated_word_percentage()
 
     filtered = text.content
-    #log.info(f"Filtering message: {text}")
+    # log.info(f"Filtering message: {text}")
     # Remove random spaces
     filtered = filtered.strip()
 
@@ -118,12 +143,15 @@ async def filter_message(self, text: discord.Message):
         return ""
 
     # Clear mesaage if it contains too many repeated words
-    #log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
+    # log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
     if await repeated_word_filter(self, filtered) > repeated_word_percentage:
         return ""
 
     # Replace mentions with the user's name
     filtered = await mention_filter(self, filtered, text.guild)
+
+    # Replace emotes with their text meanings
+    filtered = await emoji_textifier(self, filtered)
 
     # Remove links
     filtered = await link_filter(self, filtered)
