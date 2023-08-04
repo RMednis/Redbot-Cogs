@@ -9,13 +9,13 @@
         "Mednis#4521"
     ],
     "required_cogs": {},
-    "requirements": [],
+    "requirements": ["mojang", "aio-mc-rcon"],
     "tags": [
         "Players,",
         "Minecraft,",
         "Whitelist"
     ],
-    "min_bot_version": "3.3.10",
+    "min_bot_version": "3.5.0",
     "hidden": false,
     "disabled": false,
     "type": "COG"
