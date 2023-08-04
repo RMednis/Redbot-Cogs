@@ -31,7 +31,10 @@ async def generate_tts(self, message: discord.Message):
     voice = await self.config.user(message.author).voice()
     file_path = await file_manager.download_audio(self, voice, text)
 
-    await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)
+    try:
+        await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)
+    except RuntimeError as err:
+        log.error(err)
 
 
 async def repeated_word_filter(self, text: str):

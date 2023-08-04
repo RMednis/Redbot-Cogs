@@ -27,9 +27,12 @@ async def skip_tts(self):
         raise RuntimeError("Could not connect to voice server or `(lavalink)`!")
 
 
-async def play_audio(self, vc: discord.VoiceChannel, file_path: str,  volume: int, track_name: str = "TTS"):
+async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int, track_name: str = "TTS"):
     if self.llplayer is None:
-        self.llplayer = await lavalink.connect(vc, self_deaf=True)
+        try:
+            self.llplayer = await lavalink.connect(vc, self_deaf=True)
+        except lavalink.errors.NodeNotFound:
+            raise RuntimeError("Lavalink/Discord is not yet ready!")
 
     player = self.llplayer
 
@@ -37,23 +40,21 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path: str,  volume: in
         # Try and use our existing LavaLink client
         response = (await player.load_tracks(file_path))
 
-    except RuntimeError:
+    except RuntimeError and lavalink.errors.PlayerException:
         # LavaLink is not connected
         self.llplayer = await lavalink.connect(vc, self_deaf=True)
         player = self.llplayer
-
         response = (await player.load_tracks(file_path))
 
     # Response can theoretically give us multiple tracks... we only need one.
     if len(response.tracks) > 0:
-
         track = response.tracks[0]
     else:
 
         log.error(f"Could not load track {file_path}")
         return
 
-    #log.info(f"Current Volume: {player.volume}")
+    # log.info(f"Current Volume: {player.volume}")
 
     # Set the track title to something sane, so we don't just leak the entire directory structure of whatever host the
     # bot is running on
