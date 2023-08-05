@@ -1,21 +1,29 @@
 # Med's Redbot Cogs
-Random cogs and things for RedBot V3... Mainly meant for small/medium sized discord servers. 
+![](logo2.png)
 
-## Role logger
-_Ello Ello, what's all this then?!_
+Random cogs and things for RedBot V3... Mainly meant for greener pastures server's but can be used in any small-meduim server :D
+> These cogs are mainly as-is and have only been lightly tested. If you run into issues, feel free to open an issue,
+> I cannot guarantee any fixes...
 
-Logs user information changes, server setting changes, role changes, channel changes... basically everything.
+## Pastures Integration
 
-For more information, check out rolelogger/README.md
+Mincecraft server status, online player list, and whitelisting cog for redbot using an rcon connection.
+Supports custom, persistent embeds that auto update with the currently online players, as well as a lot of other features.
 
-# Quote System
-_You may die, but your words will live forever! - Unknown_
+> [!WARNING]  
+> This cog works on Redbot 3.5 but has not been updated to use slash commands
 
-Saves quotes to a MongoDB database, letting them be shared between Twitch and Discord.
-Provides the ability to recall a random quote, display the entire list, or have a random rotating one in a message.
-Also provides support for adding, editing, and deleting quotes.
+> More information in `pastures_integration/README.md`
 
+## TTS Engine
 
-## Ping protector
-Sends a warning message whenever a user tries to ping a certain user
+A better way of using Text to Speech from discord for our no-mic friends.
+Uses Streamelements API to be able to generate TTS using the voices of Brian, Amy, and many others.
 
+Automatically reads out any messages send in select channels of a user has enabled TTS, no need to do 
+`/tts` anymore and struggle with awful Microsoft system localised voices.
+
+> [!IMPORTANT]  
+> This cog only uses slash commands!
+
+> More information in `ttsengine/README.md`
