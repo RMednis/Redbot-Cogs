@@ -334,14 +334,19 @@ class TTSEngine(commands.Cog):
             self.current_track = None
 
         if event == lavalink.LavalinkEvents.TRACK_STUCK:
-            # The track has become stuck, if it is a tts track, remove it from the tts queue and skip it.
+            # The track has become stuck, if it is a tts track, remove it from the tts queue and the regular queue,
+            # then delete.
             if self.current_track.track_identifier in self.tts_queue:
+                if self.current_track in player.queue:
+                    await player.queue.remove(self.current_track)
                 await audio_manager.delete_file_and_remove(self, self.current_track)
-                await player.skip()
 
         if event == lavalink.LavalinkEvents.TRACK_EXCEPTION:
-            # The track has thrown an exception, if it is a tts track, remove it from the tts queue.
+            # The track has thrown an exception, if it is a tts track, remove it from the tts queue, and remove it
+            # from the regular queue.
             if self.current_track.track_identifier in self.tts_queue:
+                if self.current_track in player.queue:
+                    await player.queue.remove(self.current_track)
                 await audio_manager.delete_file_and_remove(self, self.current_track)
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
