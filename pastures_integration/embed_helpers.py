@@ -24,7 +24,7 @@ class customEmbed(discord.Embed):
         return
 
 
-async def error_embed(title, error, colour=0xe74c3c):
+async def error_embed(title: str, error: Exception | str, colour=0xe74c3c):
     if title == "":
         title = "Error"
 
@@ -35,7 +35,7 @@ async def error_embed(title, error, colour=0xe74c3c):
                        timestamp=datetime.datetime.utcnow(), colour=colour).pastures_footer()
 
 
-async def ping_embed(ip, key):
+async def ping_embed(ip: str, key: str):
     error = ""
     data = ""
 
@@ -79,7 +79,7 @@ async def reaction_embed():
 
 
 # The actual embeds we post in situations!
-async def whitelist_list(ip, key, color):
+async def whitelist_list(ip: str, key: str, color):
     try:
         response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist list")
         players = await minecraft_helpers.whitelisted_players(response)
@@ -104,7 +104,7 @@ async def whitelist_list(ip, key, color):
     return embed
 
 
-async def whitelist_remove(ip, key, username: str):
+async def whitelist_remove(ip: str, key: str, username: str):
     try:
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
@@ -122,7 +122,7 @@ async def whitelist_remove(ip, key, username: str):
     return embed
 
 
-async def whitelist_add(ip, key, username: str):
+async def whitelist_add(ip: str, key: str, username: str):
     try:
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
@@ -140,7 +140,7 @@ async def whitelist_add(ip, key, username: str):
     return embed
 
 
-async def online_players(ip, key, message, color, image, text, words):
+async def online_players(ip: str, key: str, message: str, color, image, text: str, words: list[str]):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
     except RuntimeError as err:
