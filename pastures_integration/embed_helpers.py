@@ -3,6 +3,8 @@ import datetime
 import logging
 import random
 import time
+from typing import Union
+
 import discord
 
 from pastures_integration import minecraft_helpers
@@ -24,7 +26,7 @@ class customEmbed(discord.Embed):
         return
 
 
-async def error_embed(title: str, error: Exception | str, colour=0xe74c3c):
+async def error_embed(title: str, error: Union[Exception, str], colour=0xe74c3c):
     if title == "":
         title = "Error"
 
