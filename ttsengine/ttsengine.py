@@ -67,7 +67,6 @@ class TTSEngine(commands.Cog):
         lavalink.unregister_event_listener(self.lavalink_events)
         file_manager.cleanup_audio(self)
 
-
     tts_settings = app_commands.Group(name="tts_settings", description="TTS Settings")
 
     @tts_settings.command(name="max_message_length", description="The maximum length of a TTS message.")
@@ -88,7 +87,6 @@ class TTSEngine(commands.Cog):
     async def tts_max_word_length(self, interaction: discord.Interaction, length: int):
         await self.config.guild(interaction.guild).max_word_length.set(length)
         await interaction.response.send_message(f"Set the maximum word length to {length} characters.")
-
 
     @tts_settings.command(name="say_name", description="Whether to say the name of the user who sent the message.")
     @app_commands.guild_only()
@@ -193,9 +191,9 @@ class TTSEngine(commands.Cog):
             if interaction.user.id not in blacklist:
                 try:
                     await audio_manager.skip_tts(self)
-                    await interaction.response.send_message("Skipped TTS message!")
+                    await interaction.response.send_message("Skipped TTS message!", delete_after=5)
                 except RuntimeError as err:
-                    await interaction.response.send_message(err)
+                    await interaction.response.send_message(err, delete_after=5)
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -208,7 +206,7 @@ class TTSEngine(commands.Cog):
             if interaction.user.id not in blacklist:
                 try:
                     await self.config.guild(interaction.guild).global_tts_volume.set(volume)
-                    await interaction.response.send_message(f"Set global TTS volume to {volume}%!")
+                    await interaction.response.send_message(f"Set global TTS volume to `{volume}%`!")
                 except RuntimeError as err:
                     await interaction.response.send_message(err)
 
@@ -237,7 +235,6 @@ class TTSEngine(commands.Cog):
             await interaction.response.send_message("You must be in a voice channel to use TTS. ❌", ephemeral=True)
             return
 
-
         # If the user has TTS disabled
         if not await self.config.user(interaction.user).tts_enabled():
             # If the user has disabled TTS and wants to disable it
@@ -260,7 +257,7 @@ class TTSEngine(commands.Cog):
             if voice.value == "disable":
 
                 await self.config.user(interaction.user).tts_enabled.set(False)
-                await interaction.response.send_message("Disabled TTS! ❌", ephemeral=False)
+                await interaction.response.send_message("Disabled TTS! ❌", ephemeral=True)
                 return
 
             # if the user has TTS enabled and wants to change the voice
