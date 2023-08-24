@@ -58,7 +58,15 @@ async def generate_tts(self, message: discord.Message):
     try:
         await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)
     except RuntimeError as err:
-        log.error(err)
+        # Attempt to reset the lavalink connection
+        await audio_manager.reconnect_ll(self, message.author.voice.channel)
+        log.info("Reconnecting lavalink to a VC")
+
+        try:
+            await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)
+        except RuntimeError as err:
+            log.error("Failed to (re)connect LavaLink to a VC")
+            log.error(err)
 
 
 async def repeated_word_filter(self, text: str):

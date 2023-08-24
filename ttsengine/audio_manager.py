@@ -26,6 +26,11 @@ async def skip_tts(self):
     else:
         raise RuntimeError("Could not connect to voice server or `(lavalink)`!")
 
+async def reconnect_ll(self, vc: discord.VoiceChannel):
+    try:
+        self.llplayer = await lavalink.connect(vc, self_deaf=True)
+    except lavalink.errors.NodeNotFound:
+        raise RuntimeError("Lavalink/Discord is not yet ready!")
 
 async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int, track_name: str = "TTS"):
     if self.llplayer is None:
