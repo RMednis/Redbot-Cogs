@@ -26,18 +26,19 @@ async def skip_tts(self):
     else:
         raise RuntimeError("Could not connect to voice server or `(lavalink)`!")
 
+
 async def reconnect_ll(self, vc: discord.VoiceChannel):
     try:
         self.llplayer = await lavalink.connect(vc, self_deaf=True)
     except lavalink.errors.NodeNotFound:
         raise RuntimeError("Lavalink/Discord is not yet ready!")
 
+
 async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int, track_name: str = "TTS"):
+
+    # If we don't have a lavalink reference cached.
     if self.llplayer is None:
-        try:
-            self.llplayer = await lavalink.connect(vc, self_deaf=True)
-        except lavalink.errors.NodeNotFound:
-            raise RuntimeError("Lavalink/Discord is not yet ready!")
+        await reconnect_ll(self, vc)
 
     player = self.llplayer
 
@@ -46,16 +47,21 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int
         response = (await player.load_tracks(file_path))
 
     except RuntimeError and lavalink.errors.PlayerException:
-        # LavaLink is not connected
-        self.llplayer = await lavalink.connect(vc, self_deaf=True)
-        player = self.llplayer
-        response = (await player.load_tracks(file_path))
+        try:
+            # LavaLink is not connected
+            await reconnect_ll(self, vc)
+
+            # Try and fix it
+            player = self.llplayer
+            response = (await player.load_tracks(file_path))
+        except RuntimeError and lavalink.errors.PlayerException as err:
+            log.error("Failed to connect while trying to play TTS :(")
+            log.error(err)
 
     # Response can theoretically give us multiple tracks... we only need one.
     if len(response.tracks) > 0:
         track = response.tracks[0]
     else:
-
         log.error(f"Could not load track {file_path}")
         return
 
