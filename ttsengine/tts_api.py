@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+import random
 
 import discord
 import re
@@ -37,7 +38,15 @@ async def generate_tts(self, message: discord.Message):
         else:
             if text == "Link":
                 # Clobbered to Link
-                text = f"{name} sends link"
+
+                # 1 in 10000 chance to say "sends zelda" instead of "sands link"
+                num = random.randint(1, 10000)
+
+                if num == 1:
+                    text = f"{name} sends zelda"
+                else:
+                    text = f"{name} sends link"
+
             else:
                 # Regular message
                 text = f"{name} says {text}"
