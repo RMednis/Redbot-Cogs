@@ -131,14 +131,14 @@ async def emoji_textifier(self, text: str):
     return text
 
 async def filter_spoilers(self, text: str):
-    spoiler_pattern = r'\|\|(.+)\|\|'
-    text = re.sub(spoiler_pattern, "spoilered text", text)
+    spoiler_pattern = r'\|\|(.*?)\|\|'
+    text = re.sub(spoiler_pattern, "spoiler", text)
 
     return text
 
 async def link_filter(self, text: str):
     # Regular expression pattern to match URLs
-    url_pattern = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+    url_pattern = re.compile(r"https?://(?:[a-zA-Z0-9$-_@.&+]|[!*\\(),]|(?:%[0-9a-fA-F]{2}))+")
 
     # Remove URLs from the text
     text_without_links = re.sub(url_pattern, 'Link', text)
