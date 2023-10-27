@@ -130,6 +130,12 @@ async def emoji_textifier(self, text: str):
 
     return text
 
+async def filter_spoilers(self, text: str):
+    spoiler_pattern = r'\|\|(.+)\|\|'
+    text = re.sub(spoiler_pattern, "spoilered text", text)
+
+    return text
+
 async def link_filter(self, text: str):
     # Regular expression pattern to match URLs
     url_pattern = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
@@ -179,6 +185,9 @@ async def filter_message(self, text: discord.Message):
 
     # Remove characters that cause issues
     filtered = await remove_characters(self, filtered)
+
+    # Remove spoilers
+    filtered = await filter_spoilers(self, filtered)
 
     # Clear message if it is contains too long of a word
     if await long_word_filter(self, filtered, max_word_length):
