@@ -158,14 +158,22 @@ async def fixup_text(text: str):
     # Replacce certain message patterns with more readable ones
 
     patterns_to_replace = {
-        "afk ": "A. F. K.",
-        "brb ": "B. R. B.",
-        "gtg ": "G. T. G."
+        "afk": "A F K",
+        "brb": "B R B",
+        "gtg": "G T G"
     }
 
     # Replace patterns
     for pattern, replacement in patterns_to_replace.items():
-        text = text.replace(pattern, replacement)
+
+        if text.lower().startswith(pattern):
+            text = text.replace(pattern, replacement)
+
+        pattern_with_whitespace = f" {pattern}"
+        if pattern_with_whitespace in text.lower():
+            text = text.replace(pattern_with_whitespace, f" {replacement}")
+
+    return text
 
 
 async def filter_message(self, text: discord.Message):
@@ -190,6 +198,9 @@ async def filter_message(self, text: discord.Message):
     # log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
     if await repeated_word_filter(filtered) > repeated_word_percentage:
         return ""
+
+    # Replace certain message patterns with more readable ones
+    filtered = await fixup_text(filtered)
 
     # Replace mentions with the user's name
     filtered = await mention_filter(filtered, text.guild)
