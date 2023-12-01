@@ -66,7 +66,7 @@ async def generate_tts(self, message: discord.Message):
 
     try:
         await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)
-    except RuntimeError as err:
+    except RuntimeError:
         # Attempt to reset the lavalink connection
         await audio_manager.reconnect_ll(self, message.author.voice.channel)
         log.info("Reconnecting lavalink to a VC")
@@ -78,7 +78,7 @@ async def generate_tts(self, message: discord.Message):
             log.error(err)
 
 
-async def repeated_word_filter(self, text: str):
+async def repeated_word_filter(text: str):
     # Tokenize the text into words
     words = text.split()
 
@@ -94,7 +94,7 @@ async def repeated_word_filter(self, text: str):
     return repeating_word_percentage
 
 
-async def long_word_filter(self, text: str, length):
+async def long_word_filter(text: str, length):
     words = text.split()
 
     for word in words:
@@ -104,7 +104,7 @@ async def long_word_filter(self, text: str, length):
     return False
 
 
-async def mention_filter(self, text: str, guild: discord.Guild):
+async def mention_filter(text: str, guild: discord.Guild):
     mentions = re.findall(r"<@!?\d+>", text)
     for mention in mentions:
         # Extract the user ID from the mention
@@ -124,19 +124,22 @@ async def mention_filter(self, text: str, guild: discord.Guild):
 
     return text
 
-async def emoji_textifier(self, text: str):
+
+async def emoji_textifier(text: str):
     emote_pattern = r'<a?:(\w+):\d+>'
     text = re.sub(emote_pattern, lambda match: match.group(1), text)
 
     return text
 
-async def filter_spoilers(self, text: str):
+
+async def filter_spoilers(text: str):
     spoiler_pattern = r'\|\|(.*?)\|\|'
     text = re.sub(spoiler_pattern, "spoiler", text)
 
     return text
 
-async def link_filter(self, text: str):
+
+async def link_filter(text: str):
     # Regular expression pattern to match URLs
     url_pattern = re.compile(r"https?://(?:[a-zA-Z0-9$-_@.&+]|[!*\\(),]|(?:%[0-9a-fA-F]{2}))+")
 
@@ -146,9 +149,23 @@ async def link_filter(self, text: str):
     return text_without_links
 
 
-async def remove_characters(self, text: str):
+async def remove_characters(text: str):
     # Slash command pauses the tts for a bit
     return text.replace("/", " ")
+
+
+async def fixup_text(text: str):
+    # Replacce certain message patterns with more readable ones
+
+    patterns_to_replace = {
+        "afk ": "A. F. K.",
+        "brb ": "B. R. B.",
+        "gtg ": "G. T. G."
+    }
+
+    # Replace patterns
+    for pattern, replacement in patterns_to_replace.items():
+        text = text.replace(pattern, replacement)
 
 
 async def filter_message(self, text: discord.Message):
@@ -171,26 +188,26 @@ async def filter_message(self, text: discord.Message):
 
     # Clear mesaage if it contains too many repeated words
     # log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
-    if await repeated_word_filter(self, filtered) > repeated_word_percentage:
+    if await repeated_word_filter(filtered) > repeated_word_percentage:
         return ""
 
     # Replace mentions with the user's name
-    filtered = await mention_filter(self, filtered, text.guild)
+    filtered = await mention_filter(filtered, text.guild)
 
     # Replace emotes with their text meanings
-    filtered = await emoji_textifier(self, filtered)
+    filtered = await emoji_textifier(filtered)
 
     # Remove links
-    filtered = await link_filter(self, filtered)
+    filtered = await link_filter(filtered)
 
     # Remove characters that cause issues
-    filtered = await remove_characters(self, filtered)
+    filtered = await remove_characters(filtered)
 
     # Remove spoilers
-    filtered = await filter_spoilers(self, filtered)
+    filtered = await filter_spoilers(filtered)
 
     # Clear message if it is contains too long of a word
-    if await long_word_filter(self, filtered, max_word_length):
+    if await long_word_filter(filtered, max_word_length):
         return ""
 
     # Limit the message length
