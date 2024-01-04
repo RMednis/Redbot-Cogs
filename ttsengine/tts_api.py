@@ -20,9 +20,9 @@ async def generate_tts(self, message: discord.Message):
 
         if message.author.nick:
             # Take the server nickname as preferable
-            name = message.author.nick
+            name = await fixup_text(message.author.nick)
         else:
-            name = message.author.display_name
+            name = await fixup_text(message.author.display_name)
 
         if text == "":
             # Message doesn't contain text or it got clobbered
