@@ -151,27 +151,33 @@ async def link_filter(text: str):
 
 async def remove_characters(text: str):
     # Slash command pauses the tts for a bit
-    return text.replace("/", " ")
+    text = text.replace("/", " ")
+
+    # Underscores are used to imply italics, we should ignore them
+    text = text.replace("_", " ")
+
+    return text
 
 
 async def fixup_text(text: str):
-    # Replacce certain message patterns with more readable ones
+    # Replace certain message patterns with more readable ones
 
     patterns_to_replace = {
         "afk": "A F K",
         "brb": "B R B",
-        "gtg": "G T G"
+        "gtg": "G T G",
+        "myra": "mira",
+        "myrakine": "meerakine",
+        "poi": "poi"
     }
 
-    # Replace patterns
     for pattern, replacement in patterns_to_replace.items():
+        # Create a regex pattern to match the word with optional punctuation
+        # We do this, so we can also replace words that have punctuation after them
+        regex_pattern = r'\b' + re.escape(pattern) + r'\b(?!\w)'
 
-        if text.lower().startswith(pattern):
-            text = text.replace(pattern, replacement)
-
-        pattern_with_whitespace = f" {pattern}"
-        if pattern_with_whitespace in text.lower():
-            text = text.replace(pattern_with_whitespace, f" {replacement}")
+        # Replace the word with the replacement
+        text = re.sub(regex_pattern, replacement, text, flags=re.IGNORECASE)
 
     return text
 
@@ -194,7 +200,7 @@ async def filter_message(self, text: discord.Message):
     if len(filtered) == 0:
         return ""
 
-    # Clear mesaage if it contains too many repeated words
+    # Clear message if it contains too many repeated words
     # log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
     if await repeated_word_filter(filtered) > repeated_word_percentage:
         return ""
