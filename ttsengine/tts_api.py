@@ -20,9 +20,11 @@ async def generate_tts(self, message: discord.Message):
 
         if message.author.nick:
             # Take the server nickname as preferable
-            name = await fixup_text(message.author.nick)
+            # Fix pronunciation of certain names
+            name = await fixup_name(message.author.nick)
         else:
-            name = await fixup_text(message.author.display_name)
+            # Fix pronunciation of certain names
+            name = await fixup_name(message.author.display_name)
 
         if text == "":
             # Message doesn't contain text or it got clobbered
@@ -178,6 +180,21 @@ async def fixup_text(text: str):
 
         # Replace the word with the replacement
         text = re.sub(regex_pattern, replacement, text, flags=re.IGNORECASE)
+
+    return text
+
+
+async def fixup_name(text: str):
+    # Fix pronunciation of certain names
+    patterns_to_replace = {
+        "myrakine": "meerakine",
+        "myra": "mira",
+    }
+
+    # Replace the patterns
+    for pattern, replacement in patterns_to_replace.items():
+
+        text = text.lower().replace(pattern, replacement)
 
     return text
 
