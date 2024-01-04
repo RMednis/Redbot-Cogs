@@ -9,6 +9,20 @@ from ttsengine import audio_manager, file_manager
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.text_filter")
 
+patterns_to_replace = {
+    "afk": "A F K",
+    "brb": "B R B",
+    "gtg": "G T G",
+    "myra": "mira",
+    "¯\\_(ツ)_/¯": "shrug",
+    "myrakine": "meerakine",
+    "poi": "poi"
+}
+
+compiled_patterns = {re.compile(r"\\b{0}\\b(?!\\w)".format(re.escape(pattern)), flags=re.IGNORECASE): replacement
+                     for pattern, replacement in patterns_to_replace.items()}
+
+
 
 async def generate_tts(self, message: discord.Message):
     text = await filter_message(self, message)
@@ -163,23 +177,8 @@ async def remove_characters(text: str):
 
 async def fixup_text(text: str):
     # Replace certain message patterns with more readable ones
-
-    patterns_to_replace = {
-        "afk": "A F K",
-        "brb": "B R B",
-        "gtg": "G T G",
-        "myra": "mira",
-        "myrakine": "meerakine",
-        "poi": "poi"
-    }
-
-    for pattern, replacement in patterns_to_replace.items():
-        # Create a regex pattern to match the word with optional punctuation
-        # We do this, so we can also replace words that have punctuation after them
-        regex_pattern = r'\b' + re.escape(pattern) + r'\b(?!\w)'
-
-        # Replace the word with the replacement
-        text = re.sub(regex_pattern, replacement, text, flags=re.IGNORECASE)
+    for regex_pattern, replacement in compiled_patterns.items():
+        text = regex_pattern.sub(replacement, text)
 
     return text
 
