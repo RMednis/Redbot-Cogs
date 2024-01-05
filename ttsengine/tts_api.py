@@ -36,9 +36,15 @@ async def generate_tts(self, message: discord.Message):
             # Take the server nickname as preferable
             # Fix pronunciation of certain names
             name = await fixup_name(message.author.nick)
+
+            # Set the track name to the nickname
+            track_name = f"TTS from {message.author.nick}"
         else:
             # Fix pronunciation of certain names
             name = await fixup_name(message.author.display_name)
+
+            # Set the track name to the display name
+            track_name = f"TTS from {message.author.display_name}"
 
         if text == "":
             # Message doesn't contain text or it got clobbered
@@ -74,8 +80,6 @@ async def generate_tts(self, message: discord.Message):
                     text = text + f" with attached {media_type}"
                 else:
                     text = text + " with attached media"
-
-            track_name = f"TTS from {name}"
 
     voice = await self.config.user(message.author).voice()
     file_path = await file_manager.download_audio(self, voice, text)
