@@ -19,10 +19,8 @@ patterns_to_replace = {
     "poi": "poi"
 }
 
-compiled_patterns = {re.compile(r"\\b{0}\\b(?!\\w)".format(re.escape(pattern)), flags=re.IGNORECASE): replacement
+compiled_patterns = {re.compile(r'\b' + re.escape(pattern) + r'\b(?!\w)', flags=re.IGNORECASE): replacement
                      for pattern, replacement in patterns_to_replace.items()}
-
-
 
 async def generate_tts(self, message: discord.Message):
     text = await filter_message(self, message)
