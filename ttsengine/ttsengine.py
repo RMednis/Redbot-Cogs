@@ -67,7 +67,7 @@ class TTSEngine(commands.Cog):
         lavalink.unregister_event_listener(self.lavalink_events)
         file_manager.cleanup_audio(self)
 
-    tts_settings = app_commands.Group(name="tts_settings", description="TTS Settings")
+    tts_settings = app_commands.Group(name="tts_settings", description="TTS Settings", guild_only=True)
 
     @tts_settings.command(name="max_message_length", description="The maximum length of a TTS message.")
     @app_commands.guild_only()
