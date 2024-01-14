@@ -45,6 +45,7 @@ class TTSEngine(commands.Cog):
             force_registration=True,
         )
 
+        # Default Guild Configuration
         default_guild = {
             "say_name": False,
             "blacklisted_users": [],
@@ -57,11 +58,36 @@ class TTSEngine(commands.Cog):
 
         self.config.register_guild(**default_guild)
 
+        # Default user configuration
         default_user = {
             "tts_enabled": False,
             "voice": "Brian"
         }
         self.config.register_user(**default_user)
+
+        # App commands
+        self.blacklist_add_app = discord.app_commands.ContextMenu(
+            name="Blacklist from TTS",
+            callback=self.blacklist_add
+        )
+
+        self.blacklist_remove_app = discord.app_commands.ContextMenu(
+            name="Remove from TTS blacklist", callback=self.blacklist_remove
+        )
+
+        # Make both commands Guild Only
+        self.blacklist_add_app.guild_only = True
+        self.blacklist_remove_app.guild_only = True
+
+    def cog_load(self):
+        # Load app commands when the cog is loaded
+        self.bot.tree.add_command(self.blacklist_add_app)
+        self.bot.tree.add_command(self.blacklist_remove_app)
+
+    def cog_unload(self):
+        # Unload app commands when unloading cog
+        self.bot.tree.remove_command(self.blacklist_add_app.name, type=self.blacklist_add_app.type)
+        self.bot.tree.remove_command(self.blacklist_remove_app.name, type=self.blacklist_remove_app.type)
 
     def __unload(self):
         lavalink.unregister_event_listener(self.lavalink_events)
@@ -98,32 +124,71 @@ class TTSEngine(commands.Cog):
     @app_commands.guild_only()
     async def tts_show(self, interaction: discord.Interaction):
         settings = await self.config.guild(interaction.guild).all()
-        settings_str = ""
+        settings_str = "## Current TTS Settings \n"
         for setting, value in settings.items():
-            settings_str += f"{setting}: {value}\n"
-        await interaction.response.send_message(settings_str)
+            match setting:
+                case "say_name":
+                    settings_str += f"**Say Sender Name Before Message**: `{value}`\n"
+                case "whitelisted_channels":
+                    channels = ""
+                    for channel in value:
+                        channels += f" {interaction.guild.get_channel(channel).mention},"
+                    settings_str += f"**Whitelisted Channels**:{channels} \n"
+                case "blacklisted_users":
+                    users = ""
+                    for user in value:
+                        users += f" {interaction.guild.get_member(user).mention},"
+                    settings_str += f"**Blacklisted TTS Users**:{users} \n"
+                case "max_message_length":
+                    settings_str += f"**Maximum Message Length**: `{value}` characters\n"
+                case "max_word_length":
+                    settings_str += f"**Maximum Word Length**: `{value}` characters\n"
+                case "repeated_word_percentage":
+                    settings_str += f"**Maximum Repeated Words**: `{value}%`\n"
+                case "global_tts_volume":
+                    settings_str += f"**Global TTS Volume**: `{value}%`\n"
+                case _:
+                    settings_str += f"**{setting}**: `{value}`\n"
+
+        await interaction.response.send_message(settings_str, allowed_mentions=discord.AllowedMentions(users=False))
 
     tts_blacklist = app_commands.Group(name="tts_blacklist", description="TTS Blacklist", guild_only=True)
 
     @tts_blacklist.command(name="add", description="Prevent a user from using the TTS")
     @app_commands.guild_only()
+    async def blacklist_add_cmd(self, interaction: discord, user: discord.Member):
+        await self.blacklist_add(self, interaction, user)
+
     async def blacklist_add(self, interaction: discord.Interaction, user: discord.Member):
         blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-        blacklist.append(user.id)
-        await self.config.guild(interaction.guild).blacklisted_users.set(blacklist)
-        await interaction.response.send_message(f"Added user `{user.display_name}` to blacklist!")
+        if user.id not in blacklist:
+            blacklist.append(user.id)
+            await self.config.guild(interaction.guild).blacklisted_users.set(blacklist)
+            await interaction.response.send_message(f"Added user {user.mention} to blacklist!",
+                                                    allowed_mentions=discord.AllowedMentions(users=False))
+        else:
+            await interaction.response.send_message(f"{user.mention} is already blacklisted!",
+                                                    allowed_mentions=discord.AllowedMentions(users=False))
 
     @tts_blacklist.command(name="remove", description="Allow a  user to use TTS")
     @app_commands.guild_only()
+    async def blacklist_remove_cmd(self, interaction: discord, user: discord.Member):
+        await self.blacklist_remove(self, interaction, user)
+
     async def blacklist_remove(self, interaction: discord.Interaction, user: discord.Member):
         blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-        blacklist.remove(user.id)
-        await self.config.guild(interaction.guild).blacklisted_users.set(blacklist)
-        await interaction.response.send_message(f"Removed user `{user.display_name}` to blacklist!")
+        if user.id in blacklist:
+            blacklist.remove(user.id)
+            await self.config.guild(interaction.guild).blacklisted_users.set(blacklist)
+            await interaction.response.send_message(f"Removed {user.mention} from blacklist!",
+                                                    allowed_mentions=discord.AllowedMentions(users=False))
+        else:
+            await interaction.response.send_message(f"{user.mention} is not in the blacklist!",
+                                                    allowed_mentions=discord.AllowedMentions(users=False))
 
     @tts_blacklist.command(name="list", description="List all blacklisted users")
     @app_commands.guild_only()
-    async def blacklist_add(self, interaction: discord.Interaction):
+    async def blacklist_list(self, interaction: discord.Interaction):
         blacklist = await self.config.guild(interaction.guild).blacklisted_users()
         user_list = ""
         for user_id in blacklist:
@@ -133,7 +198,7 @@ class TTSEngine(commands.Cog):
         if user_list == "":
             user_list = "None"
 
-        await interaction.response.send_message(f"TTS Blacklisted users:\n`{user_list}`")
+        await interaction.response.send_message(f"## TTS Blacklisted users:\n `{user_list}`")
 
     tts_channels = app_commands.Group(name="tts_channels", description="Whitelisted TTS channels", guild_only=True)
 
