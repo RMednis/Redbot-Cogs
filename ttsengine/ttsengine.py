@@ -103,7 +103,7 @@ class TTSEngine(commands.Cog):
             settings_str += f"{setting}: {value}\n"
         await interaction.response.send_message(settings_str)
 
-    tts_blacklist = app_commands.Group(name="tts_blacklist", description="TTS Blacklist")
+    tts_blacklist = app_commands.Group(name="tts_blacklist", description="TTS Blacklist", guild_only=True)
 
     @tts_blacklist.command(name="add", description="Prevent a user from using the TTS")
     @app_commands.guild_only()
@@ -135,7 +135,7 @@ class TTSEngine(commands.Cog):
 
         await interaction.response.send_message(f"TTS Blacklisted users:\n`{user_list}`")
 
-    tts_channels = app_commands.Group(name="tts_channels", description="Whitelisted TTS channels")
+    tts_channels = app_commands.Group(name="tts_channels", description="Whitelisted TTS channels", guild_only=True)
 
     @tts_channels.command(name="add_text", description="Add whitelisted channel for TTS text")
     @app_commands.guild_only()
