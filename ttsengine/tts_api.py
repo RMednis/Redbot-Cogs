@@ -16,6 +16,7 @@ patterns_to_replace = {
     "myra": "mira",
     "¯\\_(ツ)_/¯": "shrug",
     "myrakine": "meerakine",
+    "paradisespirit": "paradise spirit",
     "poi": "poi"
 }
 
@@ -190,6 +191,7 @@ async def fixup_name(text: str):
     patterns_to_replace = {
         "myrakine": "meerakine",
         "myra": "mira",
+        "paradisespirit": "paradise spirit"
     }
 
     # Replace the patterns
