@@ -132,7 +132,14 @@ class TTSEngine(commands.Cog):
                 case "whitelisted_channels":
                     channels = ""
                     for channel in value:
-                        channels += f" {interaction.guild.get_channel(channel).mention},"
+                        if (channel is not None) and (interaction.guild.get_channel(channel) is not None):
+                            channels += f" {interaction.guild.get_channel(channel).mention},"
+                        else:
+                            # Remove the channel from the list
+                            channel_list = await self.config.guild(interaction.guild).whitelisted_channels()
+                            channel_list.remove(channel)
+                            await self.config.guild(interaction.guild).whitelisted_channels.set(channel_list)
+
                     settings_str += f"**Whitelisted Channels**:{channels} \n"
                 case "blacklisted_users":
                     users = ""
