@@ -57,18 +57,18 @@ class TTSEngine(commands.Cog):
 
             # Text replacements
             "name_replacements": {
+                "myrakine": "meerakine",
+                "myra": "meera",
+                "paradisespirit": "paradise spirit"
+            },
+            "word_replacements": {
                 "afk": "A F K",
                 "brb": "B R B",
                 "gtg": "G T G",
-                "myra": "mira",
+                "myra": "meera",
                 "myrakine": "meerakine",
                 "paradisespirit": "paradise spirit",
                 "poi": "poi"
-            },
-            "word_replacements": {
-                "myrakine": "meerakine",
-                "myra": "mira",
-                "paradisespirit": "paradise spirit"
             }
         }
 
