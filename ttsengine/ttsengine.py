@@ -153,7 +153,7 @@ class TTSEngine(commands.Cog):
     async def remove_word_substitution(self, interaction: discord.Interaction, source: str):
         words = await self.config.guild(interaction.guild).word_replacements()
         if source in words.keys():
-            del words[source]
+            words.pop(source)
             await self.config.guild(interaction.guild).word_replacements.set(words)
             await interaction.response.send_message(f"Removed word substitution for word `{source}`")
         else:
@@ -165,7 +165,7 @@ class TTSEngine(commands.Cog):
         words = await self.config.guild(interaction.guild).name_replacements()
         if source not in words.keys():
             words[source] = substitution
-            await self.config.guild(interaction.guild).word_replacements.set(words)
+            await self.config.guild(interaction.guild).name_replacements.set(words)
             await interaction.response.send_message(f"Added name substitution `{source}`:`{substitution}` to name "
                                                     f"replacements.")
         else:
@@ -176,8 +176,8 @@ class TTSEngine(commands.Cog):
     async def remove_name_substitution(self, interaction: discord.Interaction, source: str):
         words = await self.config.guild(interaction.guild).name_replacements()
         if source in words.keys():
-            del words[source]
-            await self.config.guild(interaction.guild).word_replacements.set(words)
+            words.pop(source)
+            await self.config.guild(interaction.guild).name_replacements.set(words)
             await interaction.response.send_message(f"Removed word substitution for name `{source}`")
         else:
             await interaction.response.send_message(f"`{source}` does not have a name substitution!")
