@@ -169,7 +169,15 @@ async def remove_characters(text: str):
 async def fixup_text(text: str, replacements: dict) -> str:
     # Replace certain message patterns with more readable ones
     for pattern, replacement in replacements.items():
-        text = re.sub(r'\b' + re.escape(pattern) + r'a?(\'s|s)?\b', replacement, text, flags=re.IGNORECASE)
+        # Regular expression to match the pattern with optional 's or s at the end
+        regex_pattern = r'\b' + re.escape(pattern) + r"(?:'s|s)?\b"
+
+        # Function to perform the replacement while keeping the 's or s suffix
+        def replace_with_suffix(match):
+            suffix = match.group(0)[len(pattern):]  # Extract the suffix ('s or s)
+            return replacement + suffix
+
+        text = re.sub(regex_pattern, replace_with_suffix, text, flags=re.IGNORECASE)
 
     return text
 
