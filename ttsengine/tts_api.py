@@ -9,38 +9,26 @@ from ttsengine import audio_manager, file_manager
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.text_filter")
 
-patterns_to_replace = {
-    "afk": "A F K",
-    "brb": "B R B",
-    "gtg": "G T G",
-    "myra": "mira",
-    "¯\\_(ツ)_/¯": "shrug",
-    "myrakine": "meerakine",
-    "paradisespirit": "paradise spirit",
-    "poi": "poi"
-}
-
-compiled_patterns = {re.compile(r'\b' + re.escape(pattern) + r'\b(?!\w)', flags=re.IGNORECASE): replacement
-                     for pattern, replacement in patterns_to_replace.items()}
 
 async def generate_tts(self, message: discord.Message):
     text = await filter_message(self, message)
     track_name = "TTS"
 
     track_volume = await self.config.guild(message.guild).global_tts_volume()
+    name_replacements = await self.config.guild(message.guild).name_replacements()
 
     if await self.config.guild(message.guild).say_name():
 
         if message.author.nick:
             # Take the server nickname as preferable
             # Fix pronunciation of certain names
-            name = await fixup_name(message.author.nick)
+            name = await fixup_name(message.author.nick, name_replacements)
 
             # Set the track name to the nickname
             track_name = f"TTS from {message.author.nick}"
         else:
             # Fix pronunciation of certain names
-            name = await fixup_name(message.author.display_name)
+            name = await fixup_name(message.author.display_name, name_replacements)
 
             # Set the track name to the display name
             track_name = f"TTS from {message.author.display_name}"
@@ -160,7 +148,7 @@ async def filter_spoilers(text: str):
 
 async def link_filter(text: str):
     # Regular expression pattern to match URLs
-    url_pattern = re.compile(r"https?://(?:[a-zA-Z0-9$-_@.&+]|[!*\\(),]|(?:%[0-9a-fA-F]{2}))+")
+    url_pattern = re.compile(r"https?://(?:[a-zA-Z0-9$-_@.&+]|[!*\\(),]|%[0-9a-fA-F]{2})+")
 
     # Remove URLs from the text
     text_without_links = re.sub(url_pattern, 'Link', text)
@@ -178,25 +166,18 @@ async def remove_characters(text: str):
     return text
 
 
-async def fixup_text(text: str):
+async def fixup_text(text: str, replacements: dict) -> str:
     # Replace certain message patterns with more readable ones
-    for regex_pattern, replacement in compiled_patterns.items():
-        text = regex_pattern.sub(replacement, text)
+    for regex_pattern, replacement in replacements.items():
+        text = re.sub(f'\b{regex_pattern}?(\'s|s)?\b', replacement, text)
 
     return text
 
 
-async def fixup_name(text: str):
+async def fixup_name(text: str, name_replacements: dict) -> str:
     # Fix pronunciation of certain names
-    patterns_to_replace = {
-        "myrakine": "meerakine",
-        "myra": "mira",
-        "paradisespirit": "paradise spirit"
-    }
-
     # Replace the patterns
-    for pattern, replacement in patterns_to_replace.items():
-
+    for pattern, replacement in name_replacements.items():
         text = text.lower().replace(pattern, replacement)
 
     return text
@@ -207,6 +188,7 @@ async def filter_message(self, text: discord.Message):
     max_message_length = await self.config.guild(text.guild).max_message_length()
     max_word_length = await self.config.guild(text.guild).max_word_length()
     repeated_word_percentage = await self.config.guild(text.guild).repeated_word_percentage()
+    word_replacements = await self.config.guild(text.guild).word_replacements()
 
     filtered = text.content
     # log.info(f"Filtering message: {text}")
@@ -226,7 +208,7 @@ async def filter_message(self, text: discord.Message):
         return ""
 
     # Replace certain message patterns with more readable ones
-    filtered = await fixup_text(filtered)
+    filtered = await fixup_text(filtered, word_replacements)
 
     # Replace mentions with the user's name
     filtered = await mention_filter(filtered, text.guild)

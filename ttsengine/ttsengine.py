@@ -53,7 +53,23 @@ class TTSEngine(commands.Cog):
             "max_message_length": 400,
             "max_word_length": 15,
             "repeated_word_percentage": 80,
-            "global_tts_volume": 100
+            "global_tts_volume": 100,
+
+            # Text replacements
+            "name_replacements": {
+                "afk": "A F K",
+                "brb": "B R B",
+                "gtg": "G T G",
+                "myra": "mira",
+                "myrakine": "meerakine",
+                "paradisespirit": "paradise spirit",
+                "poi": "poi"
+            },
+            "word_replacements": {
+                "myrakine": "meerakine",
+                "myra": "mira",
+                "paradisespirit": "paradise spirit"
+            }
         }
 
         self.config.register_guild(**default_guild)
@@ -120,6 +136,52 @@ class TTSEngine(commands.Cog):
         await self.config.guild(interaction.guild).say_name.set(say_name)
         await interaction.response.send_message(f"Set say name to {say_name}.")
 
+    @tts_settings.command(name="add_word_substitution", description="Add a word substitution")
+    @app_commands.guild_only()
+    async def tts_add_name_substitution(self, interaction: discord.Interaction, source: str, substitution: str):
+        words = await self.config.guild(interaction.guild).word_replacements()
+        if source not in words.keys():
+            words[source] = substitution
+            await self.config.guild(interaction.guild).word_replacements.set(words)
+            await interaction.response.send_message(f"Added word substiution `{source}`:`{substitution}` to word "
+                                                    f"replacements.")
+        else:
+            await interaction.response.send_message(f"Substitution already exists for `{source}`")
+
+    @tts_settings.command(name="remove_word_substitution", description="Remove a word substitution")
+    @app_commands.guild_only()
+    async def remove_word_substitution(self, interaction: discord.Interaction, source: str):
+        words = await self.config.guild(interaction.guild).word_replacements()
+        if source in words.keys():
+            del words[source]
+            await self.config.guild(interaction.guild).word_replacements.set(words)
+            await interaction.response.send_message(f"Removed word substitution for word `{source}`")
+        else:
+            await interaction.response.send_message(f"`{source}` does not have a word substitution!")
+
+    @tts_settings.command(name="add_name_substitution", description="Add a name substitution")
+    @app_commands.guild_only()
+    async def tts_add_name_substitution(self, interaction: discord.Interaction, source: str, substitution: str):
+        words = await self.config.guild(interaction.guild).name_replacements()
+        if source not in words.keys():
+            words[source] = substitution
+            await self.config.guild(interaction.guild).word_replacements.set(words)
+            await interaction.response.send_message(f"Added name substitution `{source}`:`{substitution}` to name "
+                                                    f"replacements.")
+        else:
+            await interaction.response.send_message(f"Name substitution already exists for `{source}`")
+
+    @tts_settings.command(name="remove_name_substitution", description="Remove a name substitution")
+    @app_commands.guild_only()
+    async def remove_name_substitution(self, interaction: discord.Interaction, source: str):
+        words = await self.config.guild(interaction.guild).name_replacements()
+        if source in words.keys():
+            del words[source]
+            await self.config.guild(interaction.guild).word_replacements.set(words)
+            await interaction.response.send_message(f"Removed word substitution for name `{source}`")
+        else:
+            await interaction.response.send_message(f"`{source}` does not have a name substitution!")
+
     @tts_settings.command(name="show", description="Show current settings.")
     @app_commands.guild_only()
     async def tts_show(self, interaction: discord.Interaction):
@@ -154,6 +216,14 @@ class TTSEngine(commands.Cog):
                     settings_str += f"**Maximum Repeated Words**: `{value}%`\n"
                 case "global_tts_volume":
                     settings_str += f"**Global TTS Volume**: `{value}%`\n"
+                case "name_replacements":
+                    settings_str += "**Name Replacements** \n"
+                    for text, replacement in value.items():
+                        settings_str += f"- `{text}`: `{replacement}`\n"
+                case "word_replacements":
+                    settings_str += "**Word Replacements** \n"
+                    for text, replacement in value.items():
+                        settings_str += f"- `{text}`: `{replacement}`\n"
                 case _:
                     settings_str += f"**{setting}**: `{value}`\n"
 
