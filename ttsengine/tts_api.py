@@ -168,8 +168,8 @@ async def remove_characters(text: str):
 
 async def fixup_text(text: str, replacements: dict) -> str:
     # Replace certain message patterns with more readable ones
-    for regex_pattern, replacement in replacements.items():
-        text = re.sub(f'\b{regex_pattern}?(\'s|s)?\b', replacement, text)
+    for pattern, replacement in replacements.items():
+        text = re.sub(r'\b' + re.escape(pattern) + r'a?(\'s|s)?\b', replacement, text, flags=re.IGNORECASE)
 
     return text
 
