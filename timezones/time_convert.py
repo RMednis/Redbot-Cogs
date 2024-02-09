@@ -79,10 +79,13 @@ async def dst_status(iana_name: str) -> str:
 async def timezone_difference(iana_name1: str, iana_name2: str) -> str:
     utc_now = datetime.now(zoneinfo.ZoneInfo("UTC"))
 
-    datetime1 = utc_now.astimezone(zoneinfo.ZoneInfo(iana_name1))
-    datetime2 = utc_now.astimezone(zoneinfo.ZoneInfo(iana_name2))
+    dt = datetime.now()  # 2020-09-13
+    tz0 = zoneinfo.ZoneInfo(iana_name1)
+    tz1 = zoneinfo.ZoneInfo(iana_name2)
 
-    time_difference = datetime2 - datetime1
+    utcoff0, utcoff1 = dt.astimezone(tz0).utcoffset(), dt.astimezone(tz1).utcoffset()
+
+    time_difference = utcoff1 - utcoff0
 
     # Format the time difference
     hours, remainder = divmod(abs(time_difference).seconds, 3600)
@@ -90,9 +93,8 @@ async def timezone_difference(iana_name1: str, iana_name2: str) -> str:
 
     # Figure out if the time difference is positive or negative using total_seconds()
     if time_difference.total_seconds() < 0:
-        return f"is `{hours}:{minutes}` behind"
+        return f"is `{hours:02d}:{minutes:02d}` behind"
     elif time_difference.total_seconds() > 0:
-        return f"is `{hours}:{minutes}` ahead of"
+        return f"is `{hours:02d}:{minutes:02d}` ahead of"
     else:
         return "is the same time as"
-
