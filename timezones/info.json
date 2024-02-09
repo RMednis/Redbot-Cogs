@@ -1,0 +1,21 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+    "name": "Timezones",
+    "short": "A timezone and time conversion cog",
+    "description": "A timezone, time conversion, and timezone list cog.",
+    "end_user_data_statement": "This cog persistently stores uniquely identifiable data about the users timezone, this data can be seen and used by other users. The cog also uses GeoNames for geolocation information to determine the timezone of the user!",
+    "install_msg": "Timezone cog installed! Make sure you set your geonames api key!",
+    "author": [
+        "Mednis"
+    ],
+    "required_cogs": {},
+    "requirements": ["geocoder", "zoneinfo"],
+    "tags": [
+        "Timezone",
+        "Time"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}
