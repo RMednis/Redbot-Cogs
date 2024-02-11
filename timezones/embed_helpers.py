@@ -71,25 +71,33 @@ class TimeChangeLocation(discord.ui.View):
 
 class PersistentMessage(discord.ui.View):
     def __init__(self, config, users: list, message: discord.Message, command_mention: str):
+        # Class parameters
+        self.config = config
         self.users = users
         self.AmPm = False
         self.message = message
-        self.last_interaction_time = None
-        self.config = config
         self.command_mention = command_mention
+
+        # Cool down for the time display switch button
+        self.last_interaction_time = None
+        self.users_on_cooldown = []
+
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="12 Hour")
+    @discord.ui.button(label="12 Hour", emoji="🕙")
     async def time_display_switch(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.last_interaction_time is not None:
-            if (datetime.datetime.now() - self.last_interaction_time).seconds < 10:
-                await interaction.response.send_message("⚠️ Please wait a few seconds before changing the time display "
-                                                        "mode!",
-                                                        ephemeral=True, delete_after=15)
-                return
+            if (datetime.datetime.now() - self.last_interaction_time).seconds < 5:
+                if interaction.user.id not in self.users_on_cooldown:
+                    await interaction.response.send_message("⚠️ Please wait a few seconds before changing the time "
+                                                            "display mode!",
+                                                            ephemeral=True, delete_after=2)
+                    self.users_on_cooldown.append(interaction.user.id)
+                    return
 
         await interaction.response.defer()  # Tell Discord we are handling the interaction
         self.last_interaction_time = datetime.datetime.now()  # Update the last interaction time
+        self.users_on_cooldown = []  # Reset the users on cooldown
 
         self.AmPm = not self.AmPm  # Switch the time display mode
 
@@ -100,7 +108,7 @@ class PersistentMessage(discord.ui.View):
             embed=await user_time_list(self.users, self.message.guild, self.command_mention, self.AmPm), view=self
         )
 
-    @discord.ui.button(label="Add/Remove", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Add/Remove Yourself", emoji="🗺️", style=discord.ButtonStyle.success)
     async def add_remove_user(self, interaction: discord.Interaction, button: discord.ui.Button):
         users = await self.config.guild(interaction.guild).persistent_message_users()
 
@@ -110,8 +118,10 @@ class PersistentMessage(discord.ui.View):
             users_with_timezones = [x for x in users if x[0] != interaction.user.id]
             await self.config.guild(interaction.guild).persistent_message_users.set(users_with_timezones)
             await interaction.response.send_message("❌ **You have been removed from the time display board.**\n"
-                                                    "You will have to wait for it to refresh before "
-                                                    "seeing the changes!",
+                                                    "You will have to wait for it to refresh before seeing the changes!"
+                                                    "\nIf you wish to remove your stored timezone in general, use:"
+                                                    "```/timezone set remove```"
+                                                    "In *any other* channel.",
                                                     ephemeral=True, delete_after=15)
         else:
             timezone = await self.config.user(interaction.user).timezone()
@@ -296,11 +306,11 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
 
         description += f"- `{time_str}` `(UTC{utc_offset})`: {users}\n"
 
-    description += (f"\n You can use {command_mention} to set it based on location, or lookup your timezone name " \
-                    f"[here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) and use the `iana` option!" \
-                    f"\nGeolocation is only used to figure out your timezone and uses GeoNames for the information." \
-                    f"\n\n_You can toggle 12/24 hour time and whether or not you should be shown in this" \
-                    f" list with the buttons below._")
+    description += (f"\n_To add your timezone, press the `Add/Remove` button and enter a nearby city or location."
+                    f"\n\nWe use GeoNames for location lookup, this information only gets used to figure out your "
+                    f"timezone and does not get stored. \n"
+                    f"You can show or hide your timezone from this list at any "
+                    f"time._")
 
     embed = (TimeEmbed(
         title="🕒 Server Times",
