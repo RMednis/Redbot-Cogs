@@ -48,7 +48,7 @@ class Timezones(commands.Cog):
 
         # App interaction for showing time
         self.show_timezone_app = discord.app_commands.ContextMenu(
-            name="Show Time", callback=self.show_user_timezone
+            name="Show Time", callback=self.show_user_timezone_app
         )
         self.show_timezone_app.guild_only = True
 
@@ -211,29 +211,23 @@ class Timezones(commands.Cog):
     @app_commands.describe(user="Person for whom you want to see the current time.")
     @app_commands.rename(user="person")
     async def user(self, interaction: discord.Interaction, user: discord.Member) -> None:
+        await self.show_user_timezone(interaction, user, ephemeral=False)
+
+    async def show_user_timezone_app(self, interaction: discord.Interaction, user: discord.User) -> None:
+        await self.show_user_timezone(interaction, user, ephemeral=True)
+
+    async def show_user_timezone(self, interaction: discord.Interaction, user: discord.User, ephemeral=True) -> None:
         timezone = await self.config.user(user).timezone()
 
         if timezone != "":
             embed = await embed_helpers.time_for_person(user, timezone)
             await interaction.response.send_message(embed=embed,
                                                     delete_after=60,
-                                                    view=embed_helpers.TimeChangeUsers(timezone, user, interaction))
+                                                    view=embed_helpers.TimeChangeUsers(timezone, user, interaction),
+                                                    ephemeral=ephemeral)
         else:
-            await interaction.response.send_message("This user has not set a timezone.",
-                                                    ephemeral=True, delete_after=60)
-
-    async def show_user_timezone(self, interaction: discord.Interaction, user: discord.User) -> None:
-        timezone = await self.config.user(user).timezone()
-        embed = await embed_helpers.time_for_person(user, timezone)
-
-        if timezone != "":
-            await interaction.response.send_message(embed=embed,
-                                                    ephemeral=True,
-                                                    delete_after=60,
-                                                    view=embed_helpers.TimeChangeUsers(timezone, user, interaction))
-        else:
-            await interaction.response.send_message("This user has not set a timezone.",
-                                                    ephemeral=True, delete_after=60)
+            await interaction.response.send_message("❌ This user has __not__ set a timezone :(",
+                                                    ephemeral=ephemeral, delete_after=15)
 
     # /time in <city>
     @time.command(name="in", description="View the current time in a timezone")
