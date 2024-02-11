@@ -7,7 +7,7 @@ import logging
 from geopy.geocoders import GeoNames
 from geopy.adapters import AioHTTPAdapter
 
-log = logging.getLogger("red.mednis-cogs.timezones")
+log = logging.getLogger("red.mednis-cogs.timezones.time_convert")
 
 
 async def city_to_timezone(city: str, apikey: str) -> tuple[str, str]:
@@ -18,6 +18,7 @@ async def city_to_timezone(city: str, apikey: str) -> tuple[str, str]:
         async with GeoNames(
                 username=apikey,
                 adapter_factory=AioHTTPAdapter,
+                timeout=2
         ) as geolocator:
             location = await geolocator.geocode(query=city, exactly_one=True)
 
@@ -27,12 +28,12 @@ async def city_to_timezone(city: str, apikey: str) -> tuple[str, str]:
             timezone = await geolocator.reverse_timezone(query=location.point)
             return str(timezone), str(location)
 
-    except geopy.exc.GeocoderTimedOut:
-        log.error("Geocoder Timed Out")
+    except geopy.exc.GeocoderTimedOut as e:
+        log.error(f"Geocoder Timed Out: {e}")
         raise ValueError("Geocoder Timed Out")
 
-    except geopy.exc.GeocoderAuthenticationFailure:
-        log.error("Geocoder Authentication Failure")
+    except geopy.exc.GeocoderAuthenticationFailure as e:
+        log.error(f"Geocoder Authentication Failure: {e}")
         raise ValueError("Geocoder Authentication Failure")
 
 
@@ -61,9 +62,14 @@ async def timezone_to_utc(iana_name: str) -> str:
     current_time_in_timezone = datetime.now(timezone)
 
     # Format the time to get the UTC offset
-    utc_offset = current_time_in_timezone.strftime('%z')
-    utc_offset = utc_offset[:3] + ":" + utc_offset[3:]
+    utc_offset = await utc_time(current_time_in_timezone)
 
+    return utc_offset
+
+
+async def utc_time(time: datetime) -> str:
+    utc_offset = time.strftime('%z')
+    utc_offset = utc_offset[:3] + ":" + utc_offset[3:]
     return utc_offset
 
 
@@ -93,8 +99,43 @@ async def timezone_difference(iana_name1: str, iana_name2: str) -> str:
 
     # Figure out if the time difference is positive or negative using total_seconds()
     if time_difference.total_seconds() < 0:
-        return f"is `{hours:02d}:{minutes:02d}` behind"
+        return f"is `{hours:02d}:{minutes:02d}` hours behind"
     elif time_difference.total_seconds() > 0:
-        return f"is `{hours:02d}:{minutes:02d}` ahead of"
+        return f"is `{hours:02d}:{minutes:02d}` hours ahead of"
     else:
-        return "is the same time as"
+        return "is in the same timezone as"
+
+
+async def get_times_for_all_timezones(times: list[(str, str)]) -> list[(str, str, datetime)]:
+    time_list = []  # List of tuples containing the user's ID, timezone and the current time
+
+    current_time = datetime.now()  # Get the current time
+
+    for userid, timezone in times:  # Loop through the list of user IDs and timezones
+        time = current_time.astimezone(zoneinfo.ZoneInfo(timezone))  # Get the current time in the user's timezone
+        time_list.append((userid, timezone, time))  # Add the user's ID, timezone and the current time to the list
+    return time_list
+
+
+async def sort_list_into_times(time_list: list[(str, str, datetime)]) -> list:
+    times = []  # List of time objects
+
+    for userid, timezone, time in time_list:
+        matched = False  # Flag to track if the current time matches an existing time object
+        for time_object in times:
+            if time_object["time"].utcoffset() == time.utcoffset():
+                # Add the user to the existing time object
+                time_object["users"].append(userid)
+                matched = True
+                break
+        if not matched:
+            # Create a new time object if no match was found
+            times.append({
+                "time": time,
+                "users": [userid]
+            })
+
+    # Sort the list of time objects by the time
+    times = sorted(times, key=lambda x: x['time'].utcoffset())
+
+    return times

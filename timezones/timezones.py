@@ -1,12 +1,17 @@
+import logging
 from typing import Literal
 
 import discord
 from discord import app_commands
+from discord.ext import tasks
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.config import Config
+from redbot.core.utils import AsyncIter
 
 from timezones import time_convert, embed_helpers
+
+log = logging.getLogger("red.mednis-cogs.timezones")
 
 RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 
@@ -27,8 +32,9 @@ class Timezones(commands.Cog):
         default_guild = {
             "persistent_channel": "",
             "persistent_message": "",
-            "timezone_users": {},
-            "geonames_apikey": ""
+            "persistent_message_users": [],
+            "geonames_apikey": "",
+            "twelve_hour_time": False
         }
 
         self.config.register_guild(**default_guild)
@@ -39,11 +45,17 @@ class Timezones(commands.Cog):
 
         self.config.register_user(**default_user)
 
+        # App interaction for showing time
         self.show_timezone_app = discord.app_commands.ContextMenu(
             name="Show Time", callback=self.show_user_timezone
         )
-
         self.show_timezone_app.guild_only = True
+
+        # Start the loop to update the time list
+        self.time_list_update_loop.start()
+
+    def __unload(self):
+        self.time_list_update_loop.stop()
 
     def cog_load(self):
         # Load app commands when the cog is loaded
@@ -52,21 +64,70 @@ class Timezones(commands.Cog):
     def cog_unload(self):
         # Unload app commands when unloading cog
         self.bot.tree.remove_command(self.show_timezone_app.name, type=self.show_timezone_app.type)
+        self.__unload()
+
+    @tasks.loop(seconds=30)
+    async def time_list_update_loop(self):
+        await self.bot.wait_until_ready()
+
+        log.info("--- Updating time lists ---")
+
+        async for guild in AsyncIter(self.bot.guilds):
+
+            guild = self.bot.get_guild(guild.id)
+            log.info(f"Updating time list for {guild.name}: {guild.id}")
+
+            persistent_channel = await self.config.guild(guild).persistent_channel()
+            persistent_message = await self.config.guild(guild).persistent_message()
+            twelve_hour_time = await self.config.guild(guild).twelve_hour_time()
+
+            if persistent_message != "" and persistent_channel != "":
+                try:
+                    channel = await self.bot.fetch_channel(persistent_channel)
+                    message = await channel.fetch_message(persistent_message)
+                except (discord.NotFound, ValueError):
+                    # The message or channel was deleted, so we reset the persistent message
+                    await self.config.guild(guild).persistent_message.set("")
+                    await self.config.guild(guild).persistent_channel.set("")
+                    log.error("Persistent message or channel was deleted, resetting the persistent message.")
+                    continue
+                except (discord.HTTPException, discord.Forbidden):
+                    # We can't access the channel or message, so we skip this guild
+                    log.error("Could not access the persistent message or channel, skipping this guild.")
+                    continue
+
+                # Get the list of users and their timezones, sort it
+                users_with_timezones = await self.config.guild(guild).persistent_message_users()
+                users_with_times = await time_convert.get_times_for_all_timezones(users_with_timezones)
+
+                # Convert the list of users and their timezones into a list of time objects
+                users_with_times = await time_convert.sort_list_into_times(users_with_times)
+
+                try:
+                    await message.edit(
+                        content="",
+                        embed=await embed_helpers.user_time_list(users_with_times, guild, twelve_hour_time),
+                        view=embed_helpers.PersistentMessage(self.config, users_with_times, message)
+                    )
+                except discord.HTTPException as e:
+                    log.error(f"Error: {e}")
+                    continue
+
+    # Manage the timezone board
+    async def remove_user_from_board(self, user: discord.User, guild: discord.Guild) -> None:
+        users_with_timezones = await self.config.guild(guild).persistent_message_users()
+        users_with_timezones = [x for x in users_with_timezones if x[0] != user.id]
+        await self.config.guild(guild).persistent_message_users.set(users_with_timezones)
+
+    async def add_user_to_board(self, user: discord.User, guild: discord.Guild, timezone: str) -> None:
+        await self.remove_user_from_board(user, guild)
+        users_with_timezones = await self.config.guild(guild).persistent_message_users()
+        users_with_timezones.append((user.id, timezone))
+        await self.config.guild(guild).persistent_message_users.set(users_with_timezones)
 
     # /timezone
     tz = app_commands.Group(name="timezone", description="View other people's timezones and set your own",
                             guild_only=True)
-
-    # /timezone view
-    @tz.command(name="view", description="View a user's timezone")
-    async def view(self, interaction: discord.Interaction, user: discord.Member) -> None:
-        timezone = await self.config.user(user).timezone()
-        if timezone != "":
-            await interaction.response.send_message(f"{user.mention}'s timezone is {timezone}",
-                                                    allowed_mentions=discord.AllowedMentions(users=False))
-        else:
-            await interaction.response.send_message(f"{user.mention} has not set a timezone.",
-                                                    allowed_mentions=discord.AllowedMentions(users=False))
 
     # /timezone difference <@user>
     @app_commands.describe(user="Person to compare your timezone with.")
@@ -88,7 +149,8 @@ class Timezones(commands.Cog):
             await interaction.response.send_message(f"{user.mention} {difference} {user2.mention}",
                                                     allowed_mentions=discord.AllowedMentions(users=False))
         else:
-            await interaction.response.send_message("Both users have to set their timezones to use this command.", )
+            await interaction.response.send_message("Both users have to set their timezones to use this command.",
+                                                    ephemeral=True)
 
     # /timezone set
     set_group = app_commands.Group(parent=tz, name="set", description="Set your timezone")
@@ -100,9 +162,14 @@ class Timezones(commands.Cog):
         try:
             timezone = await time_convert.city_to_timezone(city, apikey)
             iana_name = timezone[0]
+
+            # Save the timezone to the user's settings and add them to the board
             await self.config.user(interaction.user).timezone.set(iana_name)
+            await self.add_user_to_board(interaction.user, interaction.guild, iana_name)
+
             await interaction.response.send_message(f"Timezone set to `{iana_name}`!", ephemeral=True)
-        except ValueError:
+        except ValueError as e:
+            log.info(f"{interaction.user.id} - ERROR - {e}")
             await interaction.response.send_message(
                 f"Could not find a timezone for `{city}`. Make sure you entered a valid city name.", ephemeral=True)
 
@@ -112,7 +179,10 @@ class Timezones(commands.Cog):
                                      "Region/City, etc)")
     async def iana(self, interaction: discord.Interaction, iana_name: str) -> None:
         if await time_convert.check_timezone(iana_name):
+            # Save the timezone to the user's settings and add them to the board
             await self.config.user(interaction.user).timezone.set(iana_name)
+            await self.add_user_to_board(interaction.user, interaction.guild, iana_name)
+
             await interaction.response.send_message(f"Timezone set to `{iana_name}`!", ephemeral=True)
         else:
             await interaction.response.send_message(f"Could not find timezone `{iana_name}`, make sure it is a valid "
@@ -126,6 +196,7 @@ class Timezones(commands.Cog):
     async def remove(self, interaction: discord.Interaction) -> None:
         user = interaction.user
         await self.config.user(user).timezone.set("")
+        await self.remove_user_from_board(user, interaction.guild)
         await interaction.response.send_message("Previous timezone removed! (You will be removed from the timezone "
                                                 "board the next time it refreshes!)", ephemeral=True)
 
@@ -139,10 +210,12 @@ class Timezones(commands.Cog):
     @app_commands.rename(user="person")
     async def user(self, interaction: discord.Interaction, user: discord.Member) -> None:
         timezone = await self.config.user(user).timezone()
-        embed = await embed_helpers.time_for_person(user, timezone)
 
         if timezone != "":
-            await interaction.response.send_message(embed=embed, delete_after=60)
+            embed = await embed_helpers.time_for_person(user, timezone)
+            await interaction.response.send_message(embed=embed,
+                                                    delete_after=60,
+                                                    view=embed_helpers.TimeChangeUsers(timezone, user, interaction))
         else:
             await interaction.response.send_message("This user has not set a timezone.",
                                                     ephemeral=True, delete_after=60)
@@ -152,7 +225,10 @@ class Timezones(commands.Cog):
         embed = await embed_helpers.time_for_person(user, timezone)
 
         if timezone != "":
-            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=60)
+            await interaction.response.send_message(embed=embed,
+                                                    ephemeral=True,
+                                                    delete_after=60,
+                                                    view=embed_helpers.TimeChangeUsers(timezone, user, interaction))
         else:
             await interaction.response.send_message("This user has not set a timezone.",
                                                     ephemeral=True, delete_after=60)
@@ -167,16 +243,19 @@ class Timezones(commands.Cog):
         if await time_convert.check_timezone(timezone):
             await interaction.response.send_message(
                 embed=await embed_helpers.time_embed(timezone),
-                delete_after=60
+                delete_after=60,
+                view=embed_helpers.TimeChangeLocation(timezone, timezone, interaction)
             )
         else:
             try:
                 timezone_data = await time_convert.city_to_timezone(timezone, apikey)
                 await interaction.response.send_message(
                     embed=await embed_helpers.time_embed(timezone_data[0], timezone_data[1]),
-                    delete_after=60
+                    delete_after=60,
+                    view=embed_helpers.TimeChangeLocation(timezone_data[0], timezone_data[1], interaction)
                 )
-            except ValueError:
+            except ValueError as e:
+                log.info(f"{interaction.user.id} - ERROR - {e} - time in {timezone}")
                 await interaction.response.send_message(f"Could not find a timezone for `{timezone}`. Make sure you "
                                                         f"entered a valid timezone or city name.", ephemeral=True)
 
@@ -187,7 +266,8 @@ class Timezones(commands.Cog):
         if timezone != "":
             await interaction.response.send_message(
                 embed=await embed_helpers.time_for_person(interaction.user, timezone),
-                delete_after=60
+                delete_after=60,
+                view=embed_helpers.TimeChangeUsers(timezone, interaction.user, interaction)
             )
         else:
             await interaction.response.send_message(
@@ -201,7 +281,16 @@ class Timezones(commands.Cog):
     @tzsetup.command(name="channel", description="Set the channel for persistent time messages")
     @commands.has_permissions(administrator=True)
     async def channel(self, interaction: discord.Interaction, channel: discord.TextChannel) -> None:
+        try:
+            message = await channel.send("Loading...")
+        except discord.HTTPException:
+            await interaction.response.send_message("I don't have permission to send messages in that channel.",
+                                                    ephemeral=True)
+            return
+
         await self.config.guild(interaction.guild).persistent_channel.set(channel.id)
+        await self.config.guild(interaction.guild).persistent_message.set(message.id)
+
         await interaction.response.send_message(f"Persistent channel set to {channel.mention}!")
 
     # /tz-setup apikey <apikey>
