@@ -191,7 +191,7 @@ class Timezones(commands.Cog):
                                                     f"IANA timezone name. You can see a list of IANA timezone names ["
                                                     f"here]("
                                                     f"https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).",
-                                                    ephemeral=True)
+                                                    ephemeral=True, delete_after=60)
 
     # /timezone set remove
     @set_group.command(name="remove", description="Remove your timezone and hide it from others")
@@ -200,7 +200,7 @@ class Timezones(commands.Cog):
         await self.config.user(user).timezone.set("")
         await self.remove_user_from_board(user, interaction.guild)
         await interaction.response.send_message("Previous timezone removed! (You will be removed from the timezone "
-                                                "board the next time it refreshes!)", ephemeral=True)
+                                                "board the next time it refreshes!)", ephemeral=True, delete_after=60)
 
     # /time
     time = app_commands.Group(name="time", description="View the current time for a user or in a timezone",

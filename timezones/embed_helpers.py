@@ -117,10 +117,7 @@ class PersistentMessage(discord.ui.View):
             timezone = await self.config.user(interaction.user).timezone()
 
             if timezone == "":
-                await interaction.response.send_message(f"⚠️ **You have not set a timezone yet.** \n"
-                                                        f"Please use the {self.command_mention}"
-                                                        f"command in a **different channel** to set your timezone! :D",
-                                                        ephemeral=True, delete_after=30)
+                await interaction.response.send_modal(TimezoneModal(self.config))
                 return
 
             users.append((interaction.user.id, timezone))
@@ -132,6 +129,49 @@ class PersistentMessage(discord.ui.View):
                                                     ephemeral=True, delete_after=15)
 
 
+class TimezoneModal(discord.ui.Modal, title='Set a timezone'):
+
+    def __init__(self, config):
+        self.config = config
+        super().__init__()
+
+    location = discord.ui.TextInput(
+        label='Enter a nearby city/town/general area:',
+        placeholder='London, New York, etc.',
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        apikey = await self.config.guild(interaction.guild).geonames_apikey()
+
+        try:
+            timezone = await time_convert.city_to_timezone(self.location.value, apikey)
+            iana_name = timezone[0]
+
+            # Save the timezone to the user's settings
+            await self.config.user(interaction.user).timezone.set(iana_name)
+
+            # Save the timezone to the guild's settings
+            users = await self.config.guild(interaction.guild).persistent_message_users()
+            users.append((interaction.user.id, iana_name))
+            await self.config.guild(interaction.guild).persistent_message_users.set(users)
+
+            await interaction.response.send_message(f"Timezone set to `{iana_name}`!",
+                                                    embed=await time_for_person(interaction.user, iana_name),
+                                                    view=TimeChangeUsers(iana_name, interaction.user, interaction),
+                                                    delete_after=60, ephemeral=True
+                                                    )
+        except ValueError as e:
+            log.info(f"{interaction.user.id} - ERROR - {e}")
+            await interaction.response.send_message(
+                f"Could not find a timezone for `{self.location}`. Make sure you entered a valid city name.",
+                ephemeral=True)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        await interaction.response.send_message('Oops! Something went wrong... Try again later!', ephemeral=True)
+
+        # Make sure we know what the error actually is
+        log.error(f'Error in timezone modal:{error}')
 
 
 class TimeEmbed(discord.Embed):
@@ -229,7 +269,7 @@ async def time_for_person(person: discord.Member, timezone: str, ampm=False) -> 
     return embed
 
 
-async def user_time_list(users_times: list, guild: discord.Guild,command_mention: str, ampm=False) -> TimeEmbed:
+async def user_time_list(users_times: list, guild: discord.Guild, command_mention: str, ampm=False) -> TimeEmbed:
     description = "These are the current times for the users in this server:\n"
     previous_day = None
     for timezone in users_times:
@@ -256,11 +296,11 @@ async def user_time_list(users_times: list, guild: discord.Guild,command_mention
 
         description += f"- `{time_str}` `(UTC{utc_offset})`: {users}\n"
 
-    description += (f"\n You can use {command_mention} to set it based on location, or lookup your timezone name "\
-                    f"[here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) and use the `iana` option!"\
-                   f"\nGeolocation is only used to figure out your timezone and uses GeoNames for the information." \
-                   f"\n\n_You can toggle 12/24 hour time and whether or not you should be shown in this" \
-                   f" list with the buttons below._")
+    description += (f"\n You can use {command_mention} to set it based on location, or lookup your timezone name " \
+                    f"[here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) and use the `iana` option!" \
+                    f"\nGeolocation is only used to figure out your timezone and uses GeoNames for the information." \
+                    f"\n\n_You can toggle 12/24 hour time and whether or not you should be shown in this" \
+                    f" list with the buttons below._")
 
     embed = (TimeEmbed(
         title="🕒 Server Times",
