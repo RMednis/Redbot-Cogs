@@ -9,7 +9,7 @@
         "Mednis"
     ],
     "required_cogs": {},
-    "requirements": ["geocoder", "zoneinfo"],
+    "requirements": ["geopy"],
     "tags": [
         "Timezone",
         "Time"
