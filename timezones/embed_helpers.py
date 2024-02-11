@@ -70,12 +70,13 @@ class TimeChangeLocation(discord.ui.View):
 
 
 class PersistentMessage(discord.ui.View):
-    def __init__(self, config, users: list, message: discord.Message):
+    def __init__(self, config, users: list, message: discord.Message, command_mention: str):
         self.users = users
         self.AmPm = False
         self.message = message
         self.last_interaction_time = None
         self.config = config
+        self.command_mention = command_mention
         super().__init__(timeout=None)
 
     @discord.ui.button(label="12 Hour")
@@ -96,7 +97,7 @@ class PersistentMessage(discord.ui.View):
 
         # Update the original response with the new time display mode
         await self.message.edit(
-            embed=await user_time_list(self.users, self.message.guild, self.AmPm), view=self
+            embed=await user_time_list(self.users, self.message.guild, self.command_mention, self.AmPm), view=self
         )
 
     @discord.ui.button(label="Add/Remove", style=discord.ButtonStyle.danger)
@@ -116,10 +117,10 @@ class PersistentMessage(discord.ui.View):
             timezone = await self.config.user(interaction.user).timezone()
 
             if timezone == "":
-                await interaction.response.send_message("⚠️ **You have not set a timezone yet.** \n"
-                                                        "Please use the `/timezone set city` or `/timezone set iana`"
-                                                        "\ncommands to set your timezone! :D",
-                                                        ephemeral=True, delete_after=15)
+                await interaction.response.send_message(f"⚠️ **You have not set a timezone yet.** \n"
+                                                        f"Please use the {self.command_mention}"
+                                                        f"command in a **different channel** to set your timezone! :D",
+                                                        ephemeral=True, delete_after=30)
                 return
 
             users.append((interaction.user.id, timezone))
@@ -228,7 +229,7 @@ async def time_for_person(person: discord.Member, timezone: str, ampm=False) -> 
     return embed
 
 
-async def user_time_list(users_times: list, guild: discord.Guild, ampm=False) -> TimeEmbed:
+async def user_time_list(users_times: list, guild: discord.Guild,command_mention: str, ampm=False) -> TimeEmbed:
     description = "These are the current times for the users in this server:\n"
     previous_day = None
     for timezone in users_times:
@@ -255,8 +256,8 @@ async def user_time_list(users_times: list, guild: discord.Guild, ampm=False) ->
 
         description += f"- `{time_str}` `(UTC{utc_offset})`: {users}\n"
 
-    description += (f"\n You can use `/timezone set city` to set it based on location, or lookup your timezone name "\
-                    f"[here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) amd use the `iana` option!"\
+    description += (f"\n You can use {command_mention} to set it based on location, or lookup your timezone name "\
+                    f"[here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) and use the `iana` option!"\
                    f"\nGeolocation is only used to figure out your timezone and uses GeoNames for the information." \
                    f"\n\n_You can toggle 12/24 hour time and whether or not you should be shown in this" \
                    f" list with the buttons below._")

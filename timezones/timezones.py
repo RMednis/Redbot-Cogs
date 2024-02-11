@@ -34,7 +34,8 @@ class Timezones(commands.Cog):
             "persistent_message": "",
             "persistent_message_users": [],
             "geonames_apikey": "",
-            "twelve_hour_time": False
+            "twelve_hour_time": False,
+            "command_mention": ""
         }
 
         self.config.register_guild(**default_guild)
@@ -80,6 +81,7 @@ class Timezones(commands.Cog):
             persistent_channel = await self.config.guild(guild).persistent_channel()
             persistent_message = await self.config.guild(guild).persistent_message()
             twelve_hour_time = await self.config.guild(guild).twelve_hour_time()
+            command_mention = await self.config.guild(guild).command_mention()
 
             if persistent_message != "" and persistent_channel != "":
                 try:
@@ -106,8 +108,8 @@ class Timezones(commands.Cog):
                 try:
                     await message.edit(
                         content="",
-                        embed=await embed_helpers.user_time_list(users_with_times, guild, twelve_hour_time),
-                        view=embed_helpers.PersistentMessage(self.config, users_with_times, message)
+                        embed=await embed_helpers.user_time_list(users_with_times, guild, command_mention, twelve_hour_time),
+                        view=embed_helpers.PersistentMessage(self.config, users_with_times, message, command_mention)
                     )
                 except discord.HTTPException as e:
                     log.error(f"Error: {e}")
@@ -263,6 +265,7 @@ class Timezones(commands.Cog):
     @time.command(name="here", description="Show the current time in your timezone")
     async def here(self, interaction: discord.Interaction) -> None:
         timezone = await self.config.user(interaction.user).timezone()
+        command_mention = await self.config.guild(interaction.guild).command_mention()
         if timezone != "":
             await interaction.response.send_message(
                 embed=await embed_helpers.time_for_person(interaction.user, timezone),
@@ -271,7 +274,7 @@ class Timezones(commands.Cog):
             )
         else:
             await interaction.response.send_message(
-                "You have not set a timezone. Use `/timezone set` city or iana to set your timezone.")
+                f"You have not set a timezone. Use {command_mention} to set your timezone!")
 
     # /tz-setup
     tzsetup = app_commands.Group(name="tz-setup", description="Setup the timezone cog",
@@ -299,6 +302,13 @@ class Timezones(commands.Cog):
     async def apikey(self, interaction: discord.Interaction, apikey: str) -> None:
         await self.config.guild(interaction.guild).geonames_apikey.set(apikey)
         await interaction.response.send_message("API key set!", ephemeral=True)
+
+    # /tz-setup commandmention <command element>
+    @tzsetup.command(name="command_mention", description="Set the command mention for the cog")
+    @commands.has_permissions(administrator=True)
+    async def command_mention(self, interaction: discord.Interaction, command_mention: str) -> None:
+        await self.config.guild(interaction.guild).command_mention.set(command_mention)
+        await interaction.response.send_message(f"Command mention set to {command_mention}", ephemeral=True)
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
