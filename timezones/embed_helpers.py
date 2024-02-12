@@ -288,7 +288,7 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
 
         if previous_day != time.strftime('%A'):
             emoji = emoji_calculator(time.hour)
-            description += f"### {emoji} **{time.strftime('%A')}** {time.strftime(', %d %B')}\n"
+            description += f"### {emoji} **{time.strftime('%A')}**{time.strftime(', %d %B')}\n"
             previous_day = time.strftime('%A')
 
         if ampm:
@@ -304,7 +304,8 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
             else:
                 users += f"{user.mention}"
 
-        description += f"- `{time_str}` `(UTC{utc_offset})`: {users}\n"
+        description += (f"### {time_str} `(UTC{utc_offset})`\n"
+                        f"> {users}\n")
 
     description += (f"\n_To add your timezone, press the `Add/Remove` button and enter a nearby city or location."
                     f"\n\nWe use GeoNames for location lookup, this information only gets used to figure out your "
