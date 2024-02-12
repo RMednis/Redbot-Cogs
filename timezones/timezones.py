@@ -305,5 +305,9 @@ class Timezones(commands.Cog):
         await interaction.response.send_message(f"Command mention set to {command_mention}", ephemeral=True)
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
-        # TODO: Replace this with the proper end user data removal handling.
+        for guild in self.bot.guilds:
+            await self.config.guild(guild).persistent_message_users.set(
+                [x for x in await self.config.guild(guild).persistent_message_users() if x[0] != user_id]
+            )
+        await self.config.user_from_id(user_id).clear()
         await super().red_delete_data_for_user(requester=requester, user_id=user_id)
