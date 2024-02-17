@@ -360,6 +360,7 @@ class TTSEngine(commands.Cog):
         app_commands.Choice(name="Joey (🇺🇸)", value="Joey"),
         app_commands.Choice(name="Joanna (🇺🇸)", value="Joanna"),
         app_commands.Choice(name="Russell (🇦🇺)", value="Russell"),
+        app_commands.Choice(name="Hans (🇩🇪)", value="Hans"),
         app_commands.Choice(name="Disable ❌", value="disable")
     ])
     @app_commands.guild_only()
