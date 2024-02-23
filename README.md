@@ -27,3 +27,27 @@ Automatically reads out any messages send in select channels of a user has enabl
 > This cog only uses slash commands!
 
 > More information in `ttsengine/README.md`
+
+## Timezones
+
+Simplifies time planning in multi-national/continent servers by allowing users to set their timezone and 
+view the time in other user's timezones.
+
+Allows you to see the times in any of the set usres timezones, convert times between timezones, see the difference
+between 2 timezones, and view the current time in a timezone. Offers a persistent message that shows the current time
+in the set timezone of the users who have enabled it. And dynamic conversion between am/pc and 24 hour time.
+
+> [!IMPORTANT]  
+> This cog only uses slash commands!
+
+> More information in `timezones/README.md`
+
+## VX-er
+
+Offers the option to convert twitter and tiktok links into vxtiktok/vxtwitter links so that you can watch the video(s)
+without leaving the app.
+
+> [!IMPORTANT]  
+> This cog only uses slash commands!
+
+> More information in `vxer/README.md`
