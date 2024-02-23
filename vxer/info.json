@@ -1,0 +1,21 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+    "name": "VxEr",
+    "short": "Converts TikTok and Twitter links to their vx versions",
+    "description": "Offers the option to change a tiktok or twitter link into its vx version for easy embeds into discord properly",
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "install_msg": "Vxer has been installed!",
+    "author": [
+        "Mednis"
+    ],
+    "required_cogs": {},
+    "requirements": [],
+    "tags": [
+        "TikTok",
+        "Twitter"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}
