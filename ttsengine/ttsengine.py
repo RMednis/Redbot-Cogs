@@ -372,22 +372,23 @@ class TTSEngine(commands.Cog):
         app_commands.Choice(name="Amy (🇬🇧)", value="Amy"),
         app_commands.Choice(name="Joey (🇺🇸)", value="Joey"),
         app_commands.Choice(name="Joanna (🇺🇸)", value="Joanna"),
-        app_commands.Choice(name="Russell (🇦🇺)", value="Russell"),
         app_commands.Choice(name="Extra 🌎", value="Extra"),
         app_commands.Choice(name="Disable ❌", value="disable")
     ])
+    @app_commands.describe(extra="Additional voices")
     @app_commands.choices(extra=[
-        app_commands.Choice(name="Geraint (Welsh)", value="Geraint"),
-        app_commands.Choice(name="Salli (US)", value="Salli"),
-        app_commands.Choice(name="Matthew (US)", value="Matthew"),
-        app_commands.Choice(name="Justin (US)", value="Justin"),
-        app_commands.Choice(name="Ivy (US)", value="Ivy"),
-        app_commands.Choice(name="Auditi (IN)", value="Auditi"),
-        app_commands.Choice(name="Emma (GB)", value="Emma"),
-        app_commands.Choice(name="Nicole (AUS)", value="Nicole"),
-        app_commands.Choice(name="Hans (DE)", value="Hans"),
-        app_commands.Choice(name="Ruben (NE)", value="Ruben"),
-        app_commands.Choice(name="Lotte (NE)", value="Lotte"),
+        app_commands.Choice(name="Geraint (🏴󠁧󠁢󠁷󠁬󠁳󠁿)", value="Geraint"),
+        app_commands.Choice(name="Salli (🇺🇸)", value="Salli"),
+        app_commands.Choice(name="Matthew (🇺🇸)", value="Matthew"),
+        app_commands.Choice(name="Justin (🇺🇸)", value="Justin"),
+        app_commands.Choice(name="Ivy (🇺🇸)", value="Ivy"),
+        app_commands.Choice(name="Auditi (🇮🇴)", value="Auditi"),
+        app_commands.Choice(name="Emma (🇬🇧)", value="Emma"),
+        app_commands.Choice(name="Russell (🇦🇺)", value="Russell"),
+        app_commands.Choice(name="Nicole (🇦🇺)", value="Nicole"),
+        app_commands.Choice(name="Hans (🇩🇪)", value="Hans"),
+        app_commands.Choice(name="Ruben (🇳🇱)", value="Ruben"),
+        app_commands.Choice(name="Lotte (🇳🇱)", value="Lotte"),
     ])
     @app_commands.guild_only()
     async def tts_voice(self, interaction: discord.Interaction,
