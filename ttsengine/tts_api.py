@@ -69,7 +69,17 @@ async def generate_tts(self, message: discord.Message):
                     text = text + " with attached media"
 
     voice = await self.config.user(message.author).voice()
-    file_path = await file_manager.download_audio(self, voice, text)
+
+    try:
+        file_path = await file_manager.download_audio(self, voice, text)
+    except RuntimeError:
+        # We had an error downloading the audio, lets reset the used voice to the default
+        log.error(f"API request failed for user {message.author.id} with voice {voice}, resetting to default voice.")
+        await self.config.user(message.author).voice.set("Brian")
+        try:
+            file_path = await file_manager.download_audio(self, "Brian", text)
+        except RuntimeError:
+            log.error("!! Failed to download audio file after resetting voice to default, is the TTS API down? !!")
 
     try:
         await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)

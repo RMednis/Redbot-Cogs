@@ -111,6 +111,19 @@ class TTSEngine(commands.Cog):
 
     tts_settings = app_commands.Group(name="tts_settings", description="TTS Settings", guild_only=True)
 
+    @tts_settings.command(name="set_voice", description="Set the TTS voice for a user.")
+    @app_commands.guild_only()
+    async def tts_set_voice(self, interaction: discord.Interaction, user: discord.Member, voice: str):
+
+        log.info(f"Setting TTS voice for {user} to {voice}")
+
+        if interaction.user.id not in self.bot.owner_ids:
+            await interaction.response.send_message("You are not authorized to use this command.", ephemeral=True)
+            return
+
+        await self.config.user(user).voice.set(voice)
+        await interaction.response.send_message(f"Set TTS voice for {user.mention} to `{voice}`.", ephemeral=True)
+
     @tts_settings.command(name="max_message_length", description="The maximum length of a TTS message.")
     @app_commands.guild_only()
     async def tts_max_message_length(self, interaction: discord.Interaction, length: int):

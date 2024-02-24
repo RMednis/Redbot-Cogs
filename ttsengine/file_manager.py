@@ -4,6 +4,8 @@ import logging
 import aiohttp
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.file_manager")
+
+
 async def download_audio(self, voice: str, text: str):
     """
     Downloads audio from the tts api.
@@ -14,6 +16,13 @@ async def download_audio(self, voice: str, text: str):
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
+
+            # Check if the request returns an audio file
+            if response.headers.get("content-type") != "audio/mp3":
+                log.error("Failed to download audio file.")
+                raise RuntimeError("Failed to download audio file.")
+
+            # Save the audio file
             with open(file_path, "wb") as file:
                 while True:
                     chunk = await response.content.read(1024)
