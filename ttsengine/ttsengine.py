@@ -373,10 +373,26 @@ class TTSEngine(commands.Cog):
         app_commands.Choice(name="Joey (🇺🇸)", value="Joey"),
         app_commands.Choice(name="Joanna (🇺🇸)", value="Joanna"),
         app_commands.Choice(name="Russell (🇦🇺)", value="Russell"),
+        app_commands.Choice(name="Extra 🌎", value="Extra"),
         app_commands.Choice(name="Disable ❌", value="disable")
     ])
+    @app_commands.choices(extra=[
+        app_commands.Choice(name="Geraint (Welsh)", value="Geraint"),
+        app_commands.Choice(name="Salli (US)", value="Salli"),
+        app_commands.Choice(name="Matthew (US)", value="Matthew"),
+        app_commands.Choice(name="Justin (US)", value="Justin"),
+        app_commands.Choice(name="Ivy (US)", value="Ivy"),
+        app_commands.Choice(name="Auditi (IN)", value="Auditi"),
+        app_commands.Choice(name="Emma (GB)", value="Emma"),
+        app_commands.Choice(name="Nicole (AUS)", value="Nicole"),
+        app_commands.Choice(name="Hans (DE)", value="Hans"),
+        app_commands.Choice(name="Ruben (NE)", value="Ruben"),
+        app_commands.Choice(name="Lotte (NE)", value="Lotte"),
+    ])
     @app_commands.guild_only()
-    async def tts_voice(self, interaction: discord.Interaction, voice: app_commands.Choice[str]):
+    async def tts_voice(self, interaction: discord.Interaction,
+                        voice: app_commands.Choice[str],
+                        extra: app_commands.Choice[str] = None):
         """
         Enable TTS for the current user.
         """
@@ -390,6 +406,13 @@ class TTSEngine(commands.Cog):
         if interaction.user.voice is None:
             await interaction.response.send_message("You must be in a voice channel to use TTS. ❌", ephemeral=True)
             return
+
+        if voice.value == "Extra":
+            if extra is not None:
+                voice = extra
+            else:
+                await interaction.response.send_message("You must select a voice to use TTS. ❌", ephemeral=True)
+                return
 
         # If the user has TTS disabled
         if not await self.config.user(interaction.user).tts_enabled():
