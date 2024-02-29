@@ -27,6 +27,10 @@ async def get_link(text, url) -> str:
 async def change_link(message: discord.Message, og_site, replacement_site: str) -> None:
     link = await get_link(message.content, og_site)
     link = link.replace(og_site, replacement_site)
+
+    if link == f"https://{replacement_site}/":
+        raise ValueError("No match found")
+
     await message.reply(link, mention_author=False)
 
 
@@ -125,15 +129,27 @@ class VxEr(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
 
+        # Check if the message is from a guild
+        if not message.guild:
+            return
+
         # Check if the message is from a bot
         if message.author.bot:
             return
 
-        # Check if the message is a TikTok link
-        if "tiktok.com" in message.content:
-            await self.add_message_to_list(message)
-            await message.add_reaction("🎵")
+        # Check if the message is already a vx-ed link
+        # "vxt" works for both vxTikTok and vxTwitter
+        if "vxt" in message.content:
             return
+
+        # Check if TikTok link conversion is enabled
+        if await self.config.guild(message.guild).tiktok():
+
+            # Check if the message is a TikTok link
+            if "tiktok.com/" in message.content:
+                await self.add_message_to_list(message)
+                await message.add_reaction("🎵")
+                return
 
         # Check if Twitter link conversion is enabled
         if await self.config.guild(message.guild).twitter():
@@ -153,16 +169,17 @@ class VxEr(commands.Cog):
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User) -> None:
 
-        # Check if the reaction is from a bot
-        if user.bot:
+        # Bail if the reaction is from a bot or if the message is from a DM
+        # Bailing here is faster than bailing later
+        if user.bot is True or reaction.message.guild is None:
             return
 
-        # Check if the message is in the list of messages
+        # Bail if the message is in the list of messages
         messages = await self.config.guild(reaction.message.guild).messages()
         if not any(mes[0] == reaction.message.id for mes in messages):
             return
 
-        # My user ID
+        # The bots user ID
         user_id = self.bot.user.id
         is_in_list = False
 
@@ -173,6 +190,7 @@ class VxEr(commands.Cog):
                     is_in_list = True
                     break
 
+        # Bail If the bot has not reacted to the message
         if not is_in_list:
             return
 
