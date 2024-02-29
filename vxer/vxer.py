@@ -87,8 +87,8 @@ class VxEr(commands.Cog):
                         messages.remove(message)
                         try:
                             message = await guild.get_channel(message[1]).fetch_message(message[0])
-                            await message.remove_reaction("🎵", self.bot.user)
-                            await message.remove_reaction("🐦", self.bot.user)
+                            await message.remove_reaction(emoji="🎵", member=self.bot.user)
+                            await message.remove_reaction(emoji="🐦", member=self.bot.user)
                         except discord.errors.NotFound:
                             pass
 
@@ -201,7 +201,7 @@ class VxEr(commands.Cog):
         if reaction.emoji == "🎵":
             try:
                 # Try to remove the reaction
-                await reaction.message.remove_reaction("🎵", self.bot.user)
+                await reaction.message.remove_reaction("🎵", member=self.bot.user)
             except discord.errors.Forbidden:
                 # We just give up
                 return
@@ -221,7 +221,7 @@ class VxEr(commands.Cog):
         if reaction.emoji == "🐦":
             try:
                 # Try to remove the reaction
-                await reaction.message.remove_reaction("🐦", self.bot.user)
+                await reaction.message.remove_reaction("🐦", member=self.bot.user)
             except discord.errors.Forbidden:
                 # We just give up
                 return
