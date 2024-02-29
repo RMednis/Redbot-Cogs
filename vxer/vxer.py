@@ -213,6 +213,8 @@ class VxEr(commands.Cog):
                 return
             except ValueError:
                 # We want this to be silent, so we just give up
+                log.error("Tried to change a TikTok link, but no REGEX match was found.\n"
+                          f"GUILD: {reaction.message.guild.id} MESSAGE: {reaction.message.id}")
                 return
 
         # Check if the reaction is from a Twitter link
@@ -236,6 +238,8 @@ class VxEr(commands.Cog):
                     return
                 except ValueError:
                     # It wasn't an X.com link either, so we just give up
+                    log.error("Tried to change a X/Twitter link, but no REGEX match was found.\n"
+                              f"GUILD: {reaction.message.guild.id} MESSAGE: {reaction.message.id}")
                     return
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
