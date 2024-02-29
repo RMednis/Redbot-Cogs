@@ -15,7 +15,7 @@ log = logging.getLogger("red.mednis-cogs.vxer")
 
 
 async def get_link(text, url) -> str:
-    url_re = re.compile(r"https?://([a-zA-Z0-9]+\.)?" + re.escape(url) + r"\S+")
+    url_re = re.compile(r"https?://(?:\w+\.)?" + re.escape(url) + r"\S+")
     found_url = url_re.search(text)
 
     if found_url:
@@ -135,17 +135,20 @@ class VxEr(commands.Cog):
             await message.add_reaction("🎵")
             return
 
-        # Check if the message is a Twitter link
-        if "twitter.com" in message.content:
-            await self.add_message_to_list(message)
-            await message.add_reaction("🐦")
-            return
+        # Check if Twitter link conversion is enabled
+        if await self.config.guild(message.guild).twitter():
 
-        # Chack if the message is a X.com link
-        if "x.com" in message.content:
-            await self.add_message_to_list(message)
-            await message.add_reaction("🐦")
-            return
+            # Check if the message is a Twitter link
+            if "twitter.com/" in message.content:
+                await self.add_message_to_list(message)
+                await message.add_reaction("🐦")
+                return
+
+            # Check if the message is a X.com link
+            if "x.com/" in message.content:
+                await self.add_message_to_list(message)
+                await message.add_reaction("🐦")
+                return
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User) -> None:
