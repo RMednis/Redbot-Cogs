@@ -9,7 +9,7 @@
         "Mednis"
     ],
     "required_cogs": {},
-    "requirements": ["geopy"],
+    "requirements": ["geopy", "parsedatetime"],
     "tags": [
         "Timezone",
         "Time"
