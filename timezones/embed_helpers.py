@@ -279,6 +279,36 @@ async def time_for_person(person: discord.Member, timezone: str, ampm=False) -> 
     return embed
 
 
+async def time_convert_from(input_text: str, user_1: discord.Member, user_2: discord.Member, time_utc: datetime,
+                            time_user2: datetime) -> TimeEmbed:
+    tz = str(time_user2.tzinfo)
+
+    embed = (TimeEmbed(title=f"{greeting_calculator(time_user2.hour)}",
+                       description=(f"`{input_text}` for {user_1.mention} is:\n"
+                                    f"# <t:{time_utc.timestamp().as_integer_ratio()[0]}:t>\n"
+                                    f"Which is **{time_user2.strftime('%H:%M')}** for "
+                                    f"{user_2.mention} `{await utc_time(tz)}`\n"),
+                       colour=color_calculator(time_user2.hour))
+             .version_footer())
+
+    return embed
+
+
+async def time_convert_to(input_text: str, user_from: discord.Member, user_to: discord.Member, time_utc: datetime,
+                          time_to: datetime) -> TimeEmbed:
+    tz = str(time_to.tzinfo)
+
+    embed = (TimeEmbed(title=f"{greeting_calculator(time_to.hour)}",
+                       description=(f"`{input_text}` for {user_to.mention} is:\n"
+                                    f"# <t:{time_utc.timestamp().as_integer_ratio()[0]}:t>\n"
+                                    f"Which is **{time_to.strftime('%H:%M')}** for "
+                                    f"{user_from.mention} `{await utc_time(tz)}`\n"),
+                       colour=color_calculator(time_to.hour))
+             .version_footer())
+
+    return embed
+
+
 async def user_time_list(users_times: list, guild: discord.Guild, command_mention: str, ampm=False) -> TimeEmbed:
     description = "These are the current times for the users in this server:\n"
     previous_day = None
