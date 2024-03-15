@@ -419,7 +419,7 @@ class TTSEngine(commands.Cog):
         if not await self.config.user(interaction.user).tts_enabled():
             # If the user has disabled TTS and wants to disable it
             if voice.value == "disable":
-                await interaction.response.send_message("TTS Was already disabled for you! ❌", ephemeral=False)
+                await interaction.response.send_message("TTS Was already disabled for you! ❌", ephemeral=True)
                 return
             # Enable TTS for the user and set the voice
             else:
