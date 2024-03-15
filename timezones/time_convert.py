@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import geopy
+import parsedatetime
 import zoneinfo
 import logging
 
@@ -104,6 +105,32 @@ async def timezone_difference(iana_name1: str, iana_name2: str) -> str:
         return f"is `{hours:02d}:{minutes:02d}` hours ahead of"
     else:
         return "is in the same timezone as"
+
+
+async def get_time_from_fuzzy_input(time_input: str) -> datetime:
+    cal = parsedatetime.Calendar()
+    time_struct, parse_status = cal.parse(time_input)
+
+    if parse_status == 0:
+        raise ValueError("Unable to parse time")
+
+    dt = datetime(*time_struct[:6])
+    return dt
+
+
+async def convert_time_between_zones(from_timezone: str, to_timezone: str, time: datetime) -> datetime:
+
+    # Double check that the timezones are valid
+    if await check_timezone(from_timezone) is False or await check_timezone(to_timezone) is False:
+        raise ValueError("Invalid timezone")
+
+    tz_from = zoneinfo.ZoneInfo(from_timezone)  # Create a timezone object for the from_timezone
+    tz_to = zoneinfo.ZoneInfo(to_timezone)  # Create a timezone object for the to_timezone
+
+    time_original = time.replace(tzinfo=tz_from)  # Set the timezone of the time to the from_timezone
+    time_converted = time_original.astimezone(tz_to)  # Convert the time to the to_timezone
+
+    return time_converted  # Return the time in the to_timezone timezone
 
 
 async def get_times_for_all_timezones(times: list[(str, str)]) -> list[(str, str, datetime)]:

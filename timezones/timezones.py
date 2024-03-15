@@ -270,6 +270,88 @@ class Timezones(commands.Cog):
             await interaction.response.send_message(
                 f"You have not set a timezone. Use {command_mention} to set your timezone!")
 
+    convert_time = app_commands.Group(parent=time, name="convert", description="Convert a time from one timezone to another")
+
+    @convert_time.command(name="from", description="A time to a different users timezone")
+    @app_commands.describe(time="The time you want to convert")
+    @app_commands.rename(member="member_from")
+    @app_commands.describe(member="The user whose timezone you want to convert the time from")
+    @app_commands.rename(member2="member_to")
+    @app_commands.describe(member2="The user whose timezone you want to convert the time to")
+    async def convert_time_from(self, interaction: discord.Interaction, member: discord.Member, time: str,
+                                member2: discord.Member = None) -> None:
+
+        if member2 is None:  # If the second member is not given, assume it's the user who used the command
+            member2 = interaction.user
+
+        # Get the timezones of the users
+        user1_timezone = await self.config.user(member).timezone()
+        user2_timezone = await self.config.user(member2).timezone()
+
+        # Check if the users have set their timezones
+        if user1_timezone == "":
+            await interaction.response.send_message(f"{member.mention} has not set a timezone.", ephemeral=False)
+            return
+        if user2_timezone == "":
+            await interaction.response.send_message(f"{member2.mention} has not set a timezone.", ephemeral=False)
+            return
+
+        # Convert the time and send the message
+        try:
+            time_object = await time_convert.get_time_from_fuzzy_input(time)  # Get the time object from the input
+
+            # Convert the time to the other user's timezone
+            converted_time = await time_convert.convert_time_between_zones(user1_timezone, user2_timezone, time_object)
+            utc_time = await time_convert.convert_time_between_zones(user1_timezone, "UTC", time_object)
+
+            await interaction.response.send_message(embed=await embed_helpers.time_convert_from(time, member, member2,
+                                                                                                utc_time, converted_time),
+                                                    ephemeral=False)
+        except ValueError as e:
+            await interaction.response.send_message(f"**Error Converting Time:** {e}", ephemeral=False)
+            return
+
+    @convert_time.command(name="to", description="A time to a different users timezone")
+    @app_commands.describe(time="The time you want to convert")
+    @app_commands.rename(member="member_to")
+    @app_commands.describe(member="The user whose timezone you want to convert the time to")
+    @app_commands.rename(member2="member_from")
+    @app_commands.describe(member2="The user whose timezone you want to convert the time from")
+    async def convert_time_to(self, interaction: discord.Interaction, member: discord.Member, time: str,
+                              member2: discord.Member = None) -> None:
+
+        if member2 is None:  # If the second member is not given, assume it's the user who used the command
+            member2 = interaction.user
+
+        # Get the timezones of the users
+        user1_timezone = await self.config.user(member).timezone()
+        user2_timezone = await self.config.user(member2).timezone()
+
+        # Check if the users have set their timezones
+        if user1_timezone == "":
+            await interaction.response.send_message(f"{member.mention} has not set a timezone.", ephemeral=False)
+            return
+        if user2_timezone == "":
+            await interaction.response.send_message(f"{member2.mention} has not set a timezone.", ephemeral=False)
+            return
+
+        # Convert the time and send the message
+        try:
+            time_object = await time_convert.get_time_from_fuzzy_input(time)  # Get the time object from the input
+
+            # Convert the time to the other user's timezone
+            converted_time = await time_convert.convert_time_between_zones(user2_timezone, user1_timezone, time_object)
+            utc_time = await time_convert.convert_time_between_zones(user2_timezone, "UTC", time_object)
+
+            await interaction.response.send_message(embed=await embed_helpers.time_convert_to(time, member, member2,
+                                                                                                utc_time,
+                                                                                                converted_time),
+                                                    ephemeral=False)
+        except ValueError as e:
+            await interaction.response.send_message(f"**Error Converting Time:** {e}", ephemeral=False)
+            return
+
+
     # /tz-setup
     tzsetup = app_commands.Group(name="tz-setup", description="Setup the timezone cog",
                                  guild_only=True)

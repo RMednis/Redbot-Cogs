@@ -13,8 +13,13 @@ The cog uses GeoNames for city/timezone lookup, and the API key can be set in th
 
 ## Requirements
 - Red 3.5+ is required for this cog to work.
+
 - Geopy is required for this cog to work. 
   You can install it with `[p]pipinstall geopy` _(It should be installed automatically when you install the cog.)_
+
+- parsedatetime is required for this cog to work.
+  You can install it with `[p]pipinstall parsedatetime` _(It should be installed automatically when you install the cog.)_
+ 
 
 ## Commands
 ### User Commands
@@ -22,6 +27,10 @@ The cog uses GeoNames for city/timezone lookup, and the API key can be set in th
 	- `for <Person>` - Lets you see the current time of the selected person
 	- `in <Location>` - Lets you see the current time in a specific location
 	- `here` - Lets you show the current time where you are
+    - `convert` - Lets you convert a time from one timezone to another
+		- `to <Person> <Time> <Person2 (Optional)>` - The person and time you want to convert to
+        - `from <Person> <Time> <Person2 (Optional)` - The person and time you want to convert from 
+
 - `/timezone`
 	- `set` - Lets you set the timezone
 		- `city <City/Location>` - lets you set your timezone based off the location of a nearby city. _(Uses GeoNames for lookup, your city's location is not stored!)_
