@@ -108,7 +108,7 @@ class PersistentMessage(discord.ui.View):
             embed=await user_time_list(self.users, self.message.guild, self.command_mention, self.AmPm), view=self
         )
 
-    @discord.ui.button(label="Add/Remove Yourself", emoji="🗺️", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Add/Remove a Wednesday", emoji="🗺️", style=discord.ButtonStyle.success)
     async def add_remove_user(self, interaction: discord.Interaction, button: discord.ui.Button):
         users = await self.config.guild(interaction.guild).persistent_message_users()
 
@@ -318,7 +318,10 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
 
         if previous_day != time.strftime('%A'):
             emoji = emoji_calculator(time.hour)
-            description += f"### {emoji} **{time.strftime('%A')}**{time.strftime(', %d %B')}\n"
+            # Regular
+            # description += f"### {emoji} **{time.strftime('%A')}**{time.strftime(', %d %B')}\n"
+            # Shenanigans for april fools
+            description += f"### {emoji} **Wednesday**{time.strftime(', %d %B')}\n"
             previous_day = time.strftime('%A')
 
         if ampm:
@@ -344,7 +347,8 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
                     f"time._")
 
     embed = (TimeEmbed(
-        title="🕒 Server Times",
+        # title="🕒 Server Times",
+        title="🕒 Wednesday Times",
         description=description,
         colour=color_calculator(datetime.datetime.now().hour))
              .version_footer())
