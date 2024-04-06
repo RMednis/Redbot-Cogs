@@ -319,9 +319,9 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
         if previous_day != time.strftime('%A'):
             emoji = emoji_calculator(time.hour)
             # Regular
-            # description += f"### {emoji} **{time.strftime('%A')}**{time.strftime(', %d %B')}\n"
+            description += f"### {emoji} **{time.strftime('%A')}**{time.strftime(', %d %B')}\n"
             # Shenanigans for april fools
-            description += f"### {emoji} **Wednesday**{time.strftime(', %d %B')}\n"
+            # description += f"### {emoji} **Wednesday**{time.strftime(', %d %B')}\n"
             previous_day = time.strftime('%A')
 
         if ampm:
