@@ -347,8 +347,7 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
                     f"time._")
 
     embed = (TimeEmbed(
-        # title="🕒 Server Times",
-        title="🕒 Wednesday Times",
+        title="🕒 Server Times",
         description=description,
         colour=color_calculator(datetime.datetime.now().hour))
              .version_footer())
