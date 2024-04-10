@@ -108,7 +108,7 @@ class PersistentMessage(discord.ui.View):
             embed=await user_time_list(self.users, self.message.guild, self.command_mention, self.AmPm), view=self
         )
 
-    @discord.ui.button(label="Add/Remove a Wednesday", emoji="🗺️", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Add/Remove your timezone", emoji="🗺️", style=discord.ButtonStyle.success)
     async def add_remove_user(self, interaction: discord.Interaction, button: discord.ui.Button):
         users = await self.config.guild(interaction.guild).persistent_message_users()
 
