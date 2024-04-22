@@ -332,6 +332,10 @@ async def user_time_list(users_times: list, guild: discord.Guild, command_mentio
         users = ""
         for userid in timezone["users"]:
             user = guild.get_member(userid)
+
+            if user is None:
+                raise ValueError(f"User with ID {userid} not found in the server.")
+
             if users != "":
                 users += f", {user.mention}"
             else:

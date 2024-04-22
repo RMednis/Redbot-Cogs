@@ -114,6 +114,25 @@ class Timezones(commands.Cog):
                 except discord.HTTPException as e:
                     log.error(f"Error: {e}")
                     continue
+                except ValueError as e:
+                    log.error(f"Error: {e}")
+                    # A user has possibly left the guild, so we remove them from the list
+                    await self.clean_user_list(guild)
+                    # The list will be updated on the next loop
+                    continue
+
+    async def clean_user_list(self, guild: discord.Guild) -> None:
+        users_with_timezones = await self.config.guild(guild).persistent_message_users()
+        new_users_with_timezones = []
+        for user in users_with_timezones:
+            user_id = user[0]
+            user = guild.get_member(user_id)
+            if user is not None:
+                new_users_with_timezones.append(user)
+
+        await self.config.guild(guild).persistent_message_users.set(new_users_with_timezones)
+
+
 
     # Manage the timezone board
     async def remove_user_from_board(self, user: discord.User, guild: discord.Guild) -> None:
