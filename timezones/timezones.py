@@ -122,17 +122,17 @@ class Timezones(commands.Cog):
                     continue
 
     async def clean_user_list(self, guild: discord.Guild) -> None:
+        log.info(f"Cleaning up user list for {guild.name}: {guild.id}")
         users_with_timezones = await self.config.guild(guild).persistent_message_users()
         new_users_with_timezones = []
         for user in users_with_timezones:
             user_id = user[0]
-            user = guild.get_member(user_id)
-            if user is not None:
+            dsc_user = guild.get_member(user_id)
+            if dsc_user is not None:
                 new_users_with_timezones.append(user)
 
+        log.warning(f"Removed {len(users_with_timezones) - len(new_users_with_timezones)} users from the list.")
         await self.config.guild(guild).persistent_message_users.set(new_users_with_timezones)
-
-
 
     # Manage the timezone board
     async def remove_user_from_board(self, user: discord.User, guild: discord.Guild) -> None:
