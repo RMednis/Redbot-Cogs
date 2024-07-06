@@ -1,0 +1,21 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+    "name": "Statistics",
+    "short": "A cog for pulling server and bot statistics into influx.",
+    "description": "This cog provides functionality for logging bot events and server metrics to a InfluxDB database for later analysis.",
+    "end_user_data_statement": "This cog persistently stores data about your server and bot in an InfluxDB database. This data is used to generate statistics and performance graphs for your server and bot. The data is not shared with anyone else.",
+    "install_msg": "Statistics cog has been installed and loaded. Please setup your database connection and configure the cog.",
+    "author": [
+        "Mednis"
+    ],
+    "required_cogs": {},
+    "requirements": ["influxdb-client"],
+    "tags": [
+        "Statistics",
+        "Logging"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}
