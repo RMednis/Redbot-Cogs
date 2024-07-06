@@ -1,9 +1,10 @@
 import logging
-from collections import Counter
 import random
+import re
+import time
+from collections import Counter
 
 import discord
-import re
 
 from ttsengine import audio_manager, file_manager
 
@@ -71,7 +72,20 @@ async def generate_tts(self, message: discord.Message):
     voice = await self.config.user(message.author).voice()
 
     try:
-        file_path = await file_manager.download_audio(self, voice, text)
+        if self.config.statistics:  # await self.config.statistics():
+            # Start timing the API request
+            start = time.perf_counter()
+
+            # Do the API request
+            file_path = await file_manager.download_audio(self, voice, text)
+
+            # Calculate the API latency
+            api_latency = time.perf_counter() - start
+            # Send the API statistics
+            await send_api_statistics(self, message, text, api_latency, voice)
+
+        else:
+            file_path = await file_manager.download_audio(self, voice, text)
     except RuntimeError:
         # We had an error downloading the audio, lets reset the used voice to the default
         log.error(f"API request failed for user {message.author.id} with voice {voice}, resetting to default voice.")
@@ -251,3 +265,17 @@ async def filter_message(self, text: discord.Message):
     filtered = filtered[:max_message_length]
 
     return filtered
+
+
+async def send_api_statistics(self, message, text, api_latency, voice) -> None:
+    statistics_event_tags = {
+        "guild_id": message.guild.id,
+        "user_id": message.author.id,
+    }
+    statistics_event_data = {
+        "voice": voice,
+        "length": len(text),
+        "latency": api_latency,
+    }
+
+    self.bot.dispatch("statistics_event", "tts_request", statistics_event_tags, statistics_event_data)

@@ -20,6 +20,7 @@ async def download_audio(self, voice: str, text: str):
             # Check if the request returns an audio file
             if response.headers.get("content-type") != "audio/mp3":
                 log.error("Failed to download audio file.")
+
                 raise RuntimeError("Failed to download audio file.")
 
             # Save the audio file

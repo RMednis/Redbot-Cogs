@@ -81,6 +81,12 @@ class TTSEngine(commands.Cog):
         }
         self.config.register_user(**default_user)
 
+        default_bot = {
+            "statistics": False
+        }
+
+        self.config.register_global(**default_bot)
+
         # App commands
         self.blacklist_add_app = discord.app_commands.ContextMenu(
             name="Blacklist from TTS",
@@ -194,6 +200,16 @@ class TTSEngine(commands.Cog):
             await interaction.response.send_message(f"Removed word substitution for name `{source}`")
         else:
             await interaction.response.send_message(f"`{source}` does not have a name substitution!")
+
+    @tts_settings.command(name="statistics", description="Enable statistic logging")
+    @app_commands.guild_only()
+    async def statistic_logging(self, interaction: discord.Interaction, enable: bool):
+        if enable:
+            await self.config.statistics.set(True)
+            await interaction.response.send_message("Enabled statistics logging.")
+        else:
+            await self.config.statistics.set(False)
+            await interaction.response.send_message("Disabled statistics logging.")
 
     @tts_settings.command(name="show", description="Show current settings.")
     @app_commands.guild_only()
