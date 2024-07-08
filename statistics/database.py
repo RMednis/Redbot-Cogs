@@ -2,6 +2,7 @@ import logging
 
 from influxdb_client import Point
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
+from collections import defaultdict
 
 log = logging.getLogger("red.mednis-cogs.statistics.database")
 
@@ -41,6 +42,28 @@ async def write_vc_stats(guild_id: int, channel_id: int, channel_name: str, memb
     )
 
     await write_api.write(bucket=bucket, org=org, record=str(data_point))
+
+
+async def write_message_stats(message_cache: defaultdict, channel_name_cache: defaultdict):
+    data = []
+
+    for guild_id, channels in message_cache.items():
+
+        for channel_id, message_count in channels.items():
+
+            data_point = (
+                Point("message_stats")
+                .tag("guild_id", guild_id)
+                .tag("channel_id", channel_id)
+                .field("message_count", message_count)
+            )
+
+            if channel_id in channel_name_cache[guild_id]:
+                data_point = data_point.tag("channel_name", channel_name_cache[guild_id][channel_id])
+
+            data.append(data_point)
+
+    await write_api.write(bucket=bucket, org=org, record=data)
 
 
 # Write general data points

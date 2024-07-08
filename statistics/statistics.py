@@ -8,12 +8,16 @@ from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.config import Config
 from statistics import database
+from _collections import defaultdict
 
 RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 log = logging.getLogger("red.mednis-cogs.statistics")
 
 
 class Statistics(commands.Cog):
+    message_stats_cache = defaultdict(lambda: defaultdict(int))
+    channel_name_cache = defaultdict(lambda: defaultdict(str))
+
     """
     A cog for pulling server and bot statistics into influx.
     """
@@ -51,6 +55,7 @@ class Statistics(commands.Cog):
         # Gather statistics
         await self.update_bot_stats()
         await self.update_all_vc_stats()
+        await self.update_all_message_stats()
 
         pass
 
@@ -143,6 +148,41 @@ class Statistics(commands.Cog):
             for channel in guild.voice_channels:
                 await database.write_vc_stats(guild.id, channel.id, channel.name, len(channel.members),
                                               [member for member in channel.members])
+
+    """
+    Message statistics
+    """
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        # Bail if we are not logging message stats
+        if await self.config.log_message_stats() is False:
+            return
+
+        # Bail if the message is from a bot
+        if message.author.bot:
+            return
+
+        # Bail if the message is from a DM
+        if message.guild is None:
+            return
+
+        guild_id = message.guild.id
+        channel_id = message.channel.id
+
+        # Cache the channel name if we don't have it
+        self.channel_name_cache[guild_id][channel_id] = message.channel.name
+
+        # Add the message to the cache
+        self.message_stats_cache[guild_id][channel_id] += 1
+
+    async def update_all_message_stats(self):
+        # Bail if we are not logging message stats
+        if await self.config.log_message_stats() is False:
+            return
+
+        await database.write_message_stats(self.message_stats_cache, self.channel_name_cache)
+        self.message_stats_cache.clear()
 
     """
     Configuration commands
