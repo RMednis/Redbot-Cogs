@@ -30,7 +30,10 @@ class Statistics(commands.Cog):
             "address": None,
             "bucket": None,
             "token": None,
-            "org": None
+            "org": None,
+            "log_vc_stats": False,
+            "log_message_stats": False,
+            "log_bot_stats": True,
         }
 
         self.config.register_global(**default_bot)
@@ -108,6 +111,11 @@ class Statistics(commands.Cog):
                                     member: discord.Member,
                                     before: discord.VoiceState,
                                     after: discord.VoiceState) -> None:
+
+        # Bail if we are not logging vc stats
+        if await self.config.log_vc_stats() is False:
+            return
+
         guild_id = member.guild.id
 
         # Update the statistics for the channel the member left
@@ -127,6 +135,10 @@ class Statistics(commands.Cog):
                                           [member for member in after.channel.members])
 
     async def update_all_vc_stats(self):
+        # Bail if we are not logging vc stats
+        if await self.config.log_vc_stats() is False:
+            return
+
         for guild in self.bot.guilds:
             for channel in guild.voice_channels:
                 await database.write_vc_stats(guild.id, channel.id, channel.name, len(channel.members),
@@ -165,6 +177,27 @@ class Statistics(commands.Cog):
         except Exception as e:
             await ctx.send(f"Failed to connect to the database: {e}")
             return
+
+    @commands.command("set_logging_level")
+    @commands.dm_only()
+    @commands.is_owner()
+    async def set_logging_level(self, ctx: commands.Context, log_vc_stats: bool, log_message_stats: bool,
+                                log_bot_stats: bool):
+        """
+        Set the logging level for the statistics cog
+
+        *log_vc_stats*: Log voice channel statistics (True/False)
+        *log_message_stats*: Log message statistics (True/False)
+        *log_bot_stats*: Log bot statistics (True/False)
+
+        """
+
+        await self.config.log_vc_stats.set(log_vc_stats)
+        await self.config.log_message_stats.set(log_message_stats)
+        await self.config.log_bot_stats.set(log_bot_stats)
+
+        await ctx.send(f"Statistics logging set to: \n"
+                       f"VC Statistics: {log_vc_stats}, Message Statistics: {log_message_stats}, Bot Statistics: {log_bot_stats}")
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
