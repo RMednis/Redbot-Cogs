@@ -23,6 +23,7 @@ class Statistics(commands.Cog):
     """
 
     def __init__(self, bot: Red) -> None:
+
         self.bot = bot
         self.config = Config.get_conf(
             self,
@@ -37,18 +38,53 @@ class Statistics(commands.Cog):
             "org": None,
             "log_vc_stats": False,
             "log_message_stats": False,
+            "log_member_stats": False,
             "log_bot_stats": True,
+            "log_external_stats": True
         }
+
+        self.log_vc_stats = None
+        self.log_message_stats = None
+        self.log_member_stats = None
+        self.log_bot_stats = None
+        self.log_external_stats = None
 
         self.config.register_global(**default_bot)
 
     def cog_load(self) -> None:
         log.info("Statistics cog loaded")
 
+        # Load the config values locally
+        self.bot.loop.create_task(self.load_config())
+
+        # Start the statistics gathering loop
         self.statistics_gather_loop.start()
 
     def cog_unload(self) -> None:
         self.statistics_gather_loop.cancel()
+
+    async def load_config(self):
+        # Load the config values into memory
+        # This is done on cog load and when the config is updated
+
+        self.log_vc_stats = await self.config.log_vc_stats()
+        self.log_message_stats = await self.config.log_message_stats()
+        self.log_member_stats = await self.config.log_member_stats()
+        self.log_bot_stats = await self.config.log_bot_stats()
+        self.log_external_stats = await self.config.log_external_stats()
+
+    async def temp_disable_logging(self):
+        # Disable the statistics gathering loop
+        # Used when the database is not set or the database connection fails
+        # This will prevent the bot from spamming the logs with errors
+
+        self.statistics_gather_loop.cancel()
+        self.log_vc_stats = False
+        self.log_message_stats = False
+        self.log_member_stats = False
+        self.log_bot_stats = False
+        self.log_external_stats = False
+
 
     @tasks.loop(seconds=30, reconnect=True)
     async def statistics_gather_loop(self):
@@ -56,6 +92,7 @@ class Statistics(commands.Cog):
         await self.update_bot_stats()
         await self.update_all_vc_stats()
         await self.update_all_message_stats()
+        await self.update_member_stats()
 
         pass
 
@@ -66,7 +103,8 @@ class Statistics(commands.Cog):
         if await self.config.address() is None:
             log.error("❌ No statistics database address set. "
                       "Please set one using the set_statistics_db command then restart.")
-            self.statistics_gather_loop.cancel()
+            await self.temp_disable_logging()
+            return
 
         try:
             await database.activate_client(await self.config.address(), await self.config.bucket(),
@@ -74,18 +112,25 @@ class Statistics(commands.Cog):
         except Exception as e:
             log.error(f"❌ Failed to connect to statistics database: {e}"
                       " Statistics will not be gathered.")
-            self.statistics_gather_loop.cancel()
+            await self.temp_disable_logging()
+            return
 
         await self.bot.wait_until_ready()
 
         log.info("Bot ready, testing database connection...")
 
-        await database.client.ping()
-        log.info("✅ Database up, Statistics will be gathered.")
+        try:
+            await database.client.ping()
+            log.info("✅ Database up, Statistics will be gathered.")
+        except Exception as e:
+            log.error(f"❌ Failed to connect to statistics database: {e}"
+                      " Statistics will not be gathered.")
+            await self.temp_disable_logging()
 
     @commands.Cog.listener()
     async def on_statistics_event(self, measurement: str, event: dict, data: dict) -> None:
-        await database.write_data_point(measurement, event, data)
+        if self.log_external_stats is True:
+            await database.write_data_point(measurement, event, data)
 
     """
     Shard/Connection statistics
@@ -118,7 +163,7 @@ class Statistics(commands.Cog):
                                     after: discord.VoiceState) -> None:
 
         # Bail if we are not logging vc stats
-        if await self.config.log_vc_stats() is False:
+        if self.log_vc_stats is False:
             return
 
         guild_id = member.guild.id
@@ -141,7 +186,7 @@ class Statistics(commands.Cog):
 
     async def update_all_vc_stats(self):
         # Bail if we are not logging vc stats
-        if await self.config.log_vc_stats() is False:
+        if self.log_vc_stats is False:
             return
 
         for guild in self.bot.guilds:
@@ -156,7 +201,7 @@ class Statistics(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         # Bail if we are not logging message stats
-        if await self.config.log_message_stats() is False:
+        if self.log_message_stats is False:
             return
 
         # Bail if the message is from a bot
@@ -178,11 +223,43 @@ class Statistics(commands.Cog):
 
     async def update_all_message_stats(self):
         # Bail if we are not logging message stats
-        if await self.config.log_message_stats() is False:
+        if self.log_message_stats is False:
             return
 
         await database.write_message_stats(self.message_stats_cache, self.channel_name_cache)
         self.message_stats_cache.clear()
+
+    """
+    Member statistics
+    """
+
+    async def update_member_stats(self):
+        # Bail if we are not logging message stats
+        if self.log_member_stats is False:
+            return
+
+        # Check all member statuses
+        for guild in self.bot.guilds:
+            # Status Types: online, idle, dnd, offline
+            statuses = {
+                "online": 0,
+                "idle": 0,
+                "dnd": 0,
+                "offline": 0
+            }
+
+            for member in guild.members:
+                if member.status == discord.Status.online:
+                    statuses["online"] += 1
+                elif member.status == discord.Status.idle:
+                    statuses["idle"] += 1
+                elif member.status == discord.Status.dnd:
+                    statuses["dnd"] += 1
+                elif member.status == discord.Status.offline:
+                    statuses["offline"] += 1
+
+            await database.write_member_stats(guild.id, statuses)
+
 
     """
     Configuration commands
@@ -213,31 +290,44 @@ class Statistics(commands.Cog):
 
         try:
             await database.activate_client(address, bucket, token, org)
-            await ctx.send("Connection successful. :D")
+            await ctx.send(":white_check_mark: Connection successful.")
         except Exception as e:
-            await ctx.send(f"Failed to connect to the database: {e}")
+            await ctx.send(f"Failed to connect to the database: {e}\n"
+                           f"Make sure the credentials are correct and the database is up.\n"
+                           f"_Also make sure the address is in the format: http(s)://<ip>:<port>_")
             return
 
     @commands.command("set_logging_level")
     @commands.dm_only()
     @commands.is_owner()
-    async def set_logging_level(self, ctx: commands.Context, log_vc_stats: bool, log_message_stats: bool,
-                                log_bot_stats: bool):
+    async def set_logging_level(self, ctx: commands.Context, log_vc_stats: bool, log_message_stats: bool, log_member_stats: bool,
+                                log_bot_stats: bool, log_external_stats: bool):
         """
         Set the logging level for the statistics cog
 
-        *log_vc_stats*: Log voice channel statistics (True/False)
-        *log_message_stats*: Log message statistics (True/False)
-        *log_bot_stats*: Log bot statistics (True/False)
+        **log_vc_stats**: Log voice channel statistics `(True/False)`
+        **log_message_stats**: Log message statistics `(True/False)`
+        **log_member_stats**: Log member statistics `(True/False)`
+        **log_bot_stats**: Log bot statistics `(True/False)`
+        **log_external_stats**: Log external statistics `(True/False)`
 
         """
 
+        # Update the config values
         await self.config.log_vc_stats.set(log_vc_stats)
         await self.config.log_message_stats.set(log_message_stats)
         await self.config.log_bot_stats.set(log_bot_stats)
+        await self.config.log_member_stats.set(log_member_stats)
+        await self.config.log_external_stats.set(log_external_stats)
 
+        # Update the in memory values
+        await self.load_config()
+
+        # Send a confirmation message
         await ctx.send(f"Statistics logging set to: \n"
-                       f"VC Statistics: {log_vc_stats}, Message Statistics: {log_message_stats}, Bot Statistics: {log_bot_stats}")
+                       f"- VC Statistics: {log_vc_stats}\n- Message Statistics: {log_message_stats},\n"
+                          f"- Member Statistics: {log_member_stats},\n- Bot Statistics: {log_bot_stats},\n"
+                       f"- External Statistics: {log_external_stats}")
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
