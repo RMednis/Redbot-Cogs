@@ -75,6 +75,25 @@ async def write_message_stats(message_cache: defaultdict, channel_name_cache: de
         log.error(f"Data points: {data}")
 
 
+async def write_member_stats(guild_id: int, statuses: dict):
+    data = []
+
+    for status, count in statuses.items():
+        data_point = (
+            Point("member_stats")
+            .tag("guild_id", guild_id)
+            .tag("status", status)
+            .field("member_count", count)
+        )
+
+        data.append(data_point)
+
+    try:
+        await write_api.write(bucket=bucket, org=org, record=data)
+    except Exception as e:
+        log.error(f"Failed to write data points to database: {e}")
+        log.error(f"Data points: {data}")
+
 # Write general data points
 async def write_data_point(measurement: str, tag: dict, data: dict):
     data_point = Point(measurement)

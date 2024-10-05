@@ -38,12 +38,14 @@ class Statistics(commands.Cog):
             "org": None,
             "log_vc_stats": False,
             "log_message_stats": False,
+            "log_member_stats": False,
             "log_bot_stats": True,
             "log_external_stats": True
         }
 
         self.log_vc_stats = None
         self.log_message_stats = None
+        self.log_member_stats = None
         self.log_bot_stats = None
         self.log_external_stats = None
 
@@ -67,6 +69,7 @@ class Statistics(commands.Cog):
 
         self.log_vc_stats = await self.config.log_vc_stats()
         self.log_message_stats = await self.config.log_message_stats()
+        self.log_member_stats = await self.config.log_member_stats()
         self.log_bot_stats = await self.config.log_bot_stats()
         self.log_external_stats = await self.config.log_external_stats()
 
@@ -78,6 +81,7 @@ class Statistics(commands.Cog):
         self.statistics_gather_loop.cancel()
         self.log_vc_stats = False
         self.log_message_stats = False
+        self.log_member_stats = False
         self.log_bot_stats = False
         self.log_external_stats = False
 
@@ -88,6 +92,7 @@ class Statistics(commands.Cog):
         await self.update_bot_stats()
         await self.update_all_vc_stats()
         await self.update_all_message_stats()
+        await self.update_member_stats()
 
         pass
 
@@ -225,6 +230,38 @@ class Statistics(commands.Cog):
         self.message_stats_cache.clear()
 
     """
+    Member statistics
+    """
+
+    async def update_member_stats(self):
+        # Bail if we are not logging message stats
+        if self.log_member_stats is False:
+            return
+
+        # Check all member statuses
+        for guild in self.bot.guilds:
+            # Status Types: online, idle, dnd, offline
+            statuses = {
+                "online": 0,
+                "idle": 0,
+                "dnd": 0,
+                "offline": 0
+            }
+
+            for member in guild.members:
+                if member.status == discord.Status.online:
+                    statuses["online"] += 1
+                elif member.status == discord.Status.idle:
+                    statuses["idle"] += 1
+                elif member.status == discord.Status.dnd:
+                    statuses["dnd"] += 1
+                elif member.status == discord.Status.offline:
+                    statuses["offline"] += 1
+
+            await database.write_member_stats(guild.id, statuses)
+
+
+    """
     Configuration commands
     """
 
@@ -263,13 +300,14 @@ class Statistics(commands.Cog):
     @commands.command("set_logging_level")
     @commands.dm_only()
     @commands.is_owner()
-    async def set_logging_level(self, ctx: commands.Context, log_vc_stats: bool, log_message_stats: bool,
+    async def set_logging_level(self, ctx: commands.Context, log_vc_stats: bool, log_message_stats: bool, log_member_stats: bool,
                                 log_bot_stats: bool, log_external_stats: bool):
         """
         Set the logging level for the statistics cog
 
         **log_vc_stats**: Log voice channel statistics `(True/False)`
         **log_message_stats**: Log message statistics `(True/False)`
+        **log_member_stats**: Log member statistics `(True/False)`
         **log_bot_stats**: Log bot statistics `(True/False)`
         **log_external_stats**: Log external statistics `(True/False)`
 
@@ -279,6 +317,7 @@ class Statistics(commands.Cog):
         await self.config.log_vc_stats.set(log_vc_stats)
         await self.config.log_message_stats.set(log_message_stats)
         await self.config.log_bot_stats.set(log_bot_stats)
+        await self.config.log_member_stats.set(log_member_stats)
         await self.config.log_external_stats.set(log_external_stats)
 
         # Update the in memory values
@@ -287,7 +326,8 @@ class Statistics(commands.Cog):
         # Send a confirmation message
         await ctx.send(f"Statistics logging set to: \n"
                        f"- VC Statistics: {log_vc_stats}\n- Message Statistics: {log_message_stats},\n"
-                       f"- Bot Statistics: {log_bot_stats},\n- External Statistics: {log_external_stats}")
+                          f"- Member Statistics: {log_member_stats},\n- Bot Statistics: {log_bot_stats},\n"
+                       f"- External Statistics: {log_external_stats}")
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
