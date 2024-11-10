@@ -34,9 +34,10 @@ async def generate_tts(self, message: discord.Message):
             # Set the track name to the display name
             track_name = f"TTS from {message.author.display_name}"
 
-        if text == "":
+        if text == "" or text is None:
             # Message doesn't contain text or it got clobbered
             if not message.attachments:
+                # Message is empty...
                 return
             else:
                 media_type = message.attachments[0].content_type.split("/", 1)[0]
@@ -84,6 +85,11 @@ async def generate_tts(self, message: discord.Message):
             # Send the API statistics
             await send_api_statistics(self, message, text, api_latency, voice)
 
+            if api_latency > 2:
+                log.warning(f"API request took {api_latency} seconds for user {message.author.id}.\
+                 That is over 2 seconds, dropping the message.")
+                return
+
         else:
             file_path = await file_manager.download_audio(self, voice, text)
     except RuntimeError:
@@ -94,6 +100,7 @@ async def generate_tts(self, message: discord.Message):
             file_path = await file_manager.download_audio(self, "Brian", text)
         except RuntimeError:
             log.error("!! Failed to download audio file after resetting voice to default, is the TTS API down? !!")
+            return
 
     try:
         await audio_manager.play_audio(self, message.author.voice.channel, file_path, track_volume, track_name)
