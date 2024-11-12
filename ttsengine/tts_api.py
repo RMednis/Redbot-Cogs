@@ -278,9 +278,9 @@ async def send_api_statistics(self, message, text, api_latency, voice) -> None:
     statistics_event_tags = {
         "guild_id": message.guild.id,
         "user_id": message.author.id,
+        "voice": voice
     }
     statistics_event_data = {
-        "voice": voice,
         "length": len(text),
         "latency": api_latency,
     }
