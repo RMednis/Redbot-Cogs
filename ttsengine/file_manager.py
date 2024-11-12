@@ -95,12 +95,15 @@ async def delete_audio(file_path: str):
     os.remove(file_path)
 
 async def send_voice_statistics(self, text, voice, server, code) -> None:
-    statistics_event_data = {
+    statistics_event_tags = {
         "voice": voice,
-        "length": len(text),
-        "message": text,
         "server": server,
         "code": code
     }
 
-    self.bot.dispatch("statistics_event", "tts_backend", {}, statistics_event_data)
+    statistics_event_data = {
+        "length": len(text),
+        "message": text,
+    }
+
+    self.bot.dispatch("statistics_event", "tts_backend", statistics_event_tags, statistics_event_data)
