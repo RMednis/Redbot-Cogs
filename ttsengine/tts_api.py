@@ -51,7 +51,7 @@ async def generate_tts(self, message: discord.Message):
                 # Clobbered to Link
 
                 # 1 in 10000 chance to say "sends zelda" instead of "sands link"
-                num = random.randint(1, 10000)
+                num = random.randint(1, 1000)
 
                 if num == 1:
                     text = f"{name} sends zelda"
