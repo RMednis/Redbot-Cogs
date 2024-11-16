@@ -221,6 +221,9 @@ async def fixup_name(text: str, name_replacements: dict) -> str:
 
     return text
 
+def repeated_letter_fix(string):
+    # This regex matches any letter that repeats 4 or more times consecutively.
+    return re.sub(r"([a-zA-Z])\1{3,}", lambda m: ' '.join(m.group()) + ' ', string)
 
 async def filter_message(self, text: discord.Message):
     # Config settings
@@ -264,9 +267,12 @@ async def filter_message(self, text: discord.Message):
     # Remove spoilers
     filtered = await filter_spoilers(filtered)
 
-    # Clear message if it is contains too long of a word
+    # Clear message if it contains too long of a word
     if await long_word_filter(filtered, max_word_length):
         return ""
+
+    # Replace multiplied letters with their individual pronunciations
+    filtered = repeated_letter_fix(filtered)
 
     # Limit the message length
     filtered = filtered[:max_message_length]
