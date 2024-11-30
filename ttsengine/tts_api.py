@@ -225,21 +225,40 @@ def repeated_letter_fix(string):
     # This regex matches any letter that repeats 4 or more times consecutively.
     return re.sub(r"([a-zA-Z])\1{3,}", lambda m: ' '.join(m.group()) + ' ', string)
 
+# Ignore commands that start with the command prefix
+def command_ignore_filter(text: str, command_prefixes: list):
+    for prefix in command_prefixes:
+        if text.startswith(prefix):
+            # Check if command contains special characters
+            if any(char in text for char in ["!", "?", ".", ";", ":", "_"]):
+                # Command contains special characters - pass it through
+                return text
+
+            if len(text.split(" ")) > 1:
+                # Command has arguments - may be just text
+                if "play" in text.split(" ")[1]:
+                    # Command is a play command, ignore it
+                    return ""
+            else:
+                # Command has no arguments - ignore it
+                return ""
+
+    return text
+
 async def filter_message(self, text: discord.Message):
     # Config settings
     max_message_length = await self.config.guild(text.guild).max_message_length()
     max_word_length = await self.config.guild(text.guild).max_word_length()
     repeated_word_percentage = await self.config.guild(text.guild).repeated_word_percentage()
     word_replacements = await self.config.guild(text.guild).word_replacements()
+    command_prefixes = await self.config.guild(text.guild).command_prefixes()
 
     filtered = text.content
-    # log.info(f"Filtering message: {text}")
     # Remove random spaces
     filtered = filtered.strip()
 
-    # Clear message if it contains a command
-    if filtered.startswith("."):
-        return ""
+    # Ignore commands
+    filtered = command_ignore_filter(filtered, command_prefixes)
 
     if len(filtered) == 0:
         return ""
