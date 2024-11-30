@@ -61,7 +61,10 @@ class TTSEngine(commands.Cog):
             "name_replacements": {
             },
             "word_replacements": {
-            }
+            },
+
+            # Command prefixes
+            "command_prefixes": []
         }
 
         self.config.register_guild(**default_guild)
@@ -377,12 +380,45 @@ class TTSEngine(commands.Cog):
 
                     embed.add_field(name="Word Replacements", value=word_replacements, inline=False)
 
+                case "command_prefixes":
+                    prefix_list = ""
+                    for prefix in value:
+                        prefix_list += f"{prefix}, "
+
+                    if prefix_list == "":
+                        prefix_list = "`None`"
+
+                    general_settings += f"Ignored Command Prefixes: `{prefix_list}`\n"
+
                 case _:
                     general_settings += f"{setting}: `{value}`\n"
 
         embed.insert_field_at(index=0, name="General Settings", value=general_settings, inline=False)
 
         message = await interaction.response.send_message(embed=embed, allowed_mentions=discord.AllowedMentions(users=False))
+
+    @tts_settings.command(name="add_command_prefix", description="Add a command prefix")
+    @app_commands.guild_only()
+    async def add_command_prefix(self, interaction: discord.Interaction, prefix: str):
+        prefixes = await self.config.guild(interaction.guild).command_prefixes()
+        if prefix not in prefixes:
+            prefixes.append(prefix)
+            await self.config.guild(interaction.guild).command_prefixes.set(prefixes)
+            await interaction.response.send_message(f"Added command prefix `{prefix}`")
+        else:
+            await interaction.response.send_message(f"Command prefix `{prefix}` already exists!")
+
+
+    @tts_settings.command(name="remove_command_prefix", description="Remove a command prefix")
+    @app_commands.guild_only()
+    async def remove_command_prefix(self, interaction: discord.Interaction, prefix: str):
+        prefixes = await self.config.guild(interaction.guild).command_prefixes()
+        if prefix in prefixes:
+            prefixes.remove(prefix)
+            await self.config.guild(interaction.guild).command_prefixes.set(prefixes)
+            await interaction.response.send_message(f"Removed command prefix `{prefix}`")
+        else:
+            await interaction.response.send_message(f"Command prefix `{prefix}` does not exist!")
 
     tts_blacklist = app_commands.Group(name="tts_blacklist", description="TTS Blacklist", guild_only=True)
 
