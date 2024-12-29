@@ -51,3 +51,11 @@ without leaving the app.
 > This cog only uses slash commands!
 
 > More information in `vxer/README.md`
+
+## Region Changer
+
+Allows users to change the region of a voice channel to any of the available regions.
+This is useful for letting users fix their own voice channel and connection issues.
+
+> [!IMPORTANT]  
+> This cog only uses slash commands!
