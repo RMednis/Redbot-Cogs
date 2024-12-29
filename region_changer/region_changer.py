@@ -81,6 +81,7 @@ class RegionChanger(commands.Cog):
 
     @app_commands.guild_only()
     @app_commands.checks.cooldown(1, 30, key=lambda i: i.user.id)
+    @app_commands.describe(region="The region to change the voice channel to")
     @app_commands.choices(region=[
         Choice(name="Brazil", value="brazil"),
         Choice(name="Hong Kong", value="hongkong"),
@@ -97,7 +98,7 @@ class RegionChanger(commands.Cog):
         Choice(name="US South", value="us-south"),
         Choice(name="US West", value="us-west")
     ])
-    @app_commands.command(name="region", description="Change the region of a voice channel")
+    @app_commands.command(name="region", description="Change the region of the voice channel")
     async def region(self,interaction: discord.Interaction, region: str):
         if not isinstance(interaction.channel, discord.VoiceChannel):
             return await interaction.response.send_message("This command can only be used in a voice channel",
