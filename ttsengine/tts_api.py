@@ -203,6 +203,9 @@ async def fixup_text(text: str, replacements: dict) -> str:
         # Regular expression to match the pattern with optional 's or s at the end
         regex_pattern = r'\b' + re.escape(pattern) + r"(?:'s|s)?\b"
 
+        log.warning(f"Pattern: {pattern} Replacement: {replacement}")
+        log.warning(f"Regex pattern: {regex_pattern}")
+
         # Function to perform the replacement while keeping the 's or s suffix
         def replace_with_suffix(match):
             suffix = match.group(0)[len(pattern):]  # Extract the suffix ('s or s)

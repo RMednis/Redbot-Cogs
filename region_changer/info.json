@@ -1,0 +1,22 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+    "name": "RegionChanger",
+    "short": "Allows anyone with a configured role to change channel regions",
+    "description": "Allows anyone with a configured role to change channel regions, making fixing voice region issues easier.",
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "install_msg": "Voice region changer installed.",
+    "author": [
+        "Mednis"
+    ],
+    "required_cogs": {},
+    "requirements": [],
+    "tags": [
+        "Voice Channel",
+        "Region",
+        "Moderation"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}
