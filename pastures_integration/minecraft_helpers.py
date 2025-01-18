@@ -1,8 +1,7 @@
 import logging
 import aiomcrcon
 
-from mojang import API
-from mojang.api import MojangError
+import mojang
 
 log = logging.getLogger("red.mednis-cogs.pastures_integration")
 
@@ -34,15 +33,20 @@ async def player_count(response_string: str):
 
 # Functions for dealing with username resolution
 async def check_name(input: str):
-    api = API()
+    api = mojang.API()
     try:
         uuid = api.get_uuid(input)
         if not uuid:
             raise RuntimeError(f"Could not find user `{input}` from mojang!")
         return api.get_username(uuid)
-    except MojangError:
-        raise RuntimeError(f"Error connecting to mojang api!")
-
+    except mojang.errors.MojangError as err:
+        logging.error(f"Error occurred while trying to resolve the username `{input}`: {err}")
+        if "HTTP 429" in str(err):
+            raise RuntimeError("Mojang API rate limit reached! \n\nCool it down and try again in a bit..")
+        elif "HTTP 404" in str(err):
+            raise RuntimeError(f"Could not find user `{input}`. \n\nEither the username does not exist or you misstyped it.")
+        else:
+            raise RuntimeError(f"Mojang API call failed to find `{input}`. \nA unknwon error occoured.")
 
 async def split_names(input: str):
     input.strip(" ")
