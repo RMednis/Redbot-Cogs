@@ -4,6 +4,7 @@ import json
 import logging
 from json import JSONDecodeError
 
+from discord import PartialEmoji
 from discord.ext import tasks
 from typing import Literal
 
@@ -15,7 +16,7 @@ from redbot.core.config import Config
 from redbot.core.utils import AsyncIter
 
 
-from pastures_integration import embed_helpers
+from pastures_integration import embed_helpers, config_helper
 
 RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 
@@ -36,6 +37,9 @@ class PasturesIntegration(commands.Cog):
         )
 
         default_guild_config = {
+
+            "servers" : [],
+
             # Data for the player/server message
             "persistent_channel": "",
             "persistent_message": "",
@@ -307,9 +311,165 @@ class PasturesIntegration(commands.Cog):
             else:
                 await ctx.send("The attached file is not a `.json` file!")
 
+    servers = app_commands.Group(name="server",description="Server management commands",
+                                         guild_only=True)
+    @app_commands.guild_only()
+    @servers.command(name="add", description="Add a server to the bot!")
+    async def server_add(self, interaction: discord.Interaction, server: str, ip: str, key: str, config: discord.Attachment = None):
+        guild_config = self.config.guild(interaction.guild)
+        servers = await guild_config.servers()
+
+        if config is not None:
+            if "application/json" in config.content_type:
+                #TODO: Check if the file is a valid config file before saving!
+                file_object = await config.read()
+                json_string = json.loads(file_object)
+            else:
+                await interaction.response.send_message("The attached file is not a `.json` file!")
+                return
+
+        else:
+            json_string ={
+                "name": server,
+                "ip": ip,
+                "key": key,
+                "config": config_helper.ServerConfig.default_config().to_dict()
+            }
+
+        if servers is None:
+            servers = [json_string]
+            await guild_config.servers.set(servers)
+            await interaction.response.send_message(f"Server {server} added!")
+
+        else :
+            for s in servers:
+                if s["name"] == server:
+                    await interaction.response.send_message(f"Server {server} already exists!")
+                    return
+
+            servers.append(json_string)
+            await guild_config.servers.set(servers)
+            await interaction.response.send_message(f"Server {server} added!")
+    @app_commands.guild_only()
+    @servers.command(name="list", description="List all servers added to the bot!")
+    async def server_list(self, interaction: discord.Interaction):
+        """ List all servers added to the bot!
+        """
+        guild_config = self.config.guild(interaction.guild)
+        servers = await guild_config.servers()
+
+        log.info(f"Servers: {servers}")
+
+        if len(servers) == 0:
+            await interaction.response.send_message("No servers added!")
+            return
+
+        server_list = ""
+        for s in servers:
+            server_list += f"`{s['name']}` - `{s['ip']}` \n"
+
+        await interaction.response.send_message(f"## Servers: \n {server_list}")
+
+    @app_commands.guild_only()
+    @servers.command(name="edit", description="Edit a saved servers configuration!")
+    async def server_edit(self, interaction: discord.Interaction, server_name: str, ip: str = None, key: str = None, config: discord.Attachment = None):
+        guild_config = self.config.guild(interaction.guild)
+        servers = await guild_config.servers()
+
+        for s in servers:
+            if s["name"] == server_name:
+                if ip is not None:
+                    s["ip"] = ip
+                if key is not None:
+                    s["key"] = key
+                if config is not None:
+                    try:
+                        # Save the config to the server object
+                        file_object = await config.read()
+                        settings = json.loads(file_object)
+
+                        # Parse the config file
+                        config_helper.ServerConfig.from_json(settings)
+
+                        # Save the config to the server object
+                        s["config"] = settings
+
+                    except config_helper.ConfigError as err:
+                        await interaction.response.send_message(f"Error parsing config file: {err}")
+                        return
+
+            else:
+                await interaction.response.send_message(f"Server `{server_name}` not found!")
+                return
+
+        await guild_config.servers.set(servers)
+        await interaction.response.send_message("Server edited!")
+
+    @app_commands.guild_only()
+    @servers.command(name="show", description="Show a servers configuration!")
+    async def server_show(self, interaction: discord.Interaction, server: str = None):
+
+        guild_config = self.config.guild(interaction.guild)
+        servers = await guild_config.servers()
+
+        if server is None:
+            file = io.BytesIO(config_helper.ServerConfig.default_config().to_json().encode('UTF-8'))
+            await interaction.response.send_message("This is the default server configuration!\n"
+                                                    "Edit this file and re-upload it to add a new server!",
+                                                    file=discord.File(file, filename="server_default.json"))
+            return
+
+        else:
+            for s in servers:
+                if s["name"] == server:
+                    # Convert the config to a file-like object
+                    json_payload = io.BytesIO(json.dumps(s["config"], indent=4).encode('UTF-8'))
+                    # File name is the server name, but lowercased and with spaces replaced with underscores
+                    filename = f"{server.lower().replace(' ','_')}_config.json"
+
+                    await interaction.response.send_message(f"Server configuration for `{server}` attached!\n"
+                                                            f"**Edit this file and re-upload it to edit the server!**",
+                                                            file=discord.File(json_payload, filename=filename))
+                    return
+
+            await interaction.response.send_message(f"Server `{server}` not found!")
+
+    @app_commands.guild_only()
+    @servers.command(name="set_emote", description="Set the emote for one-click whitelisting!")
+    async def server_set_emote(self, interaction: discord.Interaction, server: str, emote: str):
+        guild_config = self.config.guild(interaction.guild)
+        servers = await guild_config.servers()
+
+        if PartialEmoji.from_str(emote) is None:
+            await interaction.response.send_message("Invalid emote!")
+            return
+
+        for s in servers:
+            if s["name"] == server:
+                s["config"]["one_click_emoji"] = emote
+
+        await guild_config.servers.set(servers)
+        await interaction.response.send_message(f"Emote for {server} set to {emote}")
+
+    @app_commands.guild_only()
+    @servers.command(name="remove", description="Remove a server from the bot!")
+    async def server_remove(self, interaction: discord.Interaction, server: str):
+        """ Remove a server from the bot!
+
+        **server** - The server name
+        """
+        guild_config = self.config.guild(interaction.guild)
+        servers = await guild_config.servers()
+
+        for s in servers:
+            if s["name"] == server:
+                servers.remove(s)
+
+        await interaction.response.send_message("Server removed!")
+
     @app_commands.guild_only()
     @app_commands.command(name="ping", description="Ping the server and check for command execution times!")
-    async def ping(self, interaction: discord.Interaction, server: str):
+    async def ping(self, interaction: discord.Interaction, server_name: str):
         """Ping the server and check for command execution times!"""
 
         guild_config = self.config.guild(interaction.guild)
@@ -347,10 +507,9 @@ class PasturesIntegration(commands.Cog):
                                          description="Add or remove players from the server whitelists",
                                          guild_only=True)
 
-
     @app_commands.guild_only()
     @whitelist.command(name="add", description="Add a player to the whitelist")
-    async def add(self, interaction: discord.Interaction, server: str, player: str):
+    async def whitelist_add(self, interaction: discord.Interaction, server: str, player: str):
         """ Add a player to the whitelist
 
         **player_name** - The player name to be **added** to the whitelist!
@@ -366,7 +525,7 @@ class PasturesIntegration(commands.Cog):
 
     @app_commands.guild_only()
     @whitelist.command(name="remove", description="Remove a player from the whitelist")
-    async def remove(self, interaction: discord.Interaction, server: str, player: str):
+    async def whitelist_remove(self, interaction: discord.Interaction, server: str, player: str):
         """ Remove a player from the whitelist
 
         **player_name** - The player name to be **removed** from the whitelist!
@@ -382,7 +541,7 @@ class PasturesIntegration(commands.Cog):
 
     @app_commands.guild_only()
     @whitelist.command(name="list", description="List the current whitelist")
-    async def list(self, interaction: discord.Interaction):
+    async def whitelist_list(self, interaction: discord.Interaction):
         """ List the current whitelist
         """
         guild_config = self.config.guild(interaction.guild)
