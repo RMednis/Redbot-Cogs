@@ -16,7 +16,7 @@ logo = "https://file.mednis.network/static_assets/main-logo-mini.png"
 
 class customEmbed(discord.Embed):
     def pastures_footer(self):
-        return self.set_footer(text="GP Logger 1.3.3", icon_url=logo)
+        return self.set_footer(text="GP Logger 1.3.4", icon_url=logo)
 
     def pastures_thumbnail(self, image=logo):
         return self.set_thumbnail(url=image)
@@ -28,11 +28,20 @@ class customEmbed(discord.Embed):
 
 async def error_embed(title: str, error: Union[Exception, str], colour=0xe74c3c):
     if title == "":
-        title = "Error"
+        title = "General Error"
 
     if error == "":
-        error = "Connection/Server error! Trying again :D"
+        error = "Something went wrong and didnt return an error message!"
 
+    # If the error contains a newline, split it and format it properly
+    if "\n" in str(error):
+        text = str(error).split("\n", 1)
+
+        return customEmbed(title=title, description=f":red_circle:  **{text[0]}** \n\n{text[1]}",
+                           timestamp=datetime.datetime.utcnow(), colour=colour).pastures_footer()
+
+
+    # Make a custom embed with the error
     return customEmbed(title=title, description=f":red_circle:  **{error}**",
                        timestamp=datetime.datetime.utcnow(), colour=colour).pastures_footer()
 
