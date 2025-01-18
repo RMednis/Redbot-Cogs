@@ -65,7 +65,7 @@ class PasturesIntegration(commands.Cog):
         self.config.register_guild(**default_guild_config)
         self.update_loop.start()
 
-        log.info("MedsNET Pastures Integration Loaded!")
+        log.info("Pastures Integration Loaded!")
 
     def __unload(self):
         # Stop the loop after unload!
@@ -307,29 +307,28 @@ class PasturesIntegration(commands.Cog):
             else:
                 await ctx.send("The attached file is not a `.json` file!")
 
-    @pastures.command(name="ping")
-    async def ping(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.command(name="ping", description="Ping the server and check for command execution times!")
+    async def ping(self, interaction: discord.Interaction, server: str):
         """Ping the server and check for command execution times!"""
 
-        guild_config = self.config.guild(ctx.guild)
+        guild_config = self.config.guild(interaction.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
 
-        # Placeholder
-        tmp_embed = embed_helpers.customEmbed(title="Server Ping Status",
-                                              description="Please wait while I gather all the necessary data!",
-                                              timestamp=datetime.datetime.utcnow(), colour=0x202020).pastures_footer()
-        message = await ctx.send(embed=tmp_embed)
+        # Defer the response - The ping can take a while!
+        await interaction.response.defer()
 
-        # Response
         ping_embed = await embed_helpers.ping_embed(ip, key)
-        await message.edit(embed=ping_embed)
 
-    @pastures.command(name="players")
-    @commands.admin_or_permissions(manage_guild=True)
-    async def players(self, ctx):
+        # We got the response, send it!
+        await interaction.followup.send(embed=ping_embed)
+
+    @app_commands.guild_only()
+    @app_commands.command(name="players", description="Show a list of the currently online players")
+    async def players(self, interaction: discord.Interaction, server: str):
         """Show a list of the currently online players"""
-        guild_config = self.config.guild(ctx.guild)
+        guild_config = self.config.guild(interaction.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
 
@@ -342,78 +341,57 @@ class PasturesIntegration(commands.Cog):
         embed = await embed_helpers.online_players(ip, key, "_This message will not update!_", color, image, text,
                                                    words)
 
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @config.group(name="whitelist", autohelp=True, aliases=["white", "allow", "allowlist"])
-    @commands.admin()
-    async def conf_whitelist(self, ctx):
-        """Whitelist Settings"""
+    whitelist = app_commands.Group(name="whitelist",
+                                         description="Add or remove players from the server whitelists",
+                                         guild_only=True)
 
-    @conf_whitelist.command(name="role")
-    @commands.guildowner()
-    async def whitelist_role(self, ctx, role: discord.Role):
-        """Select which role has permission to whitelist people!"""
-        guild_config = self.config.guild(ctx.guild)
-        await guild_config.moderation_role.set(role.id)
-        await ctx.send(f"**Only people who are mods and have the `{role.name}` role will be able to whitelist!**")
 
-    @conf_whitelist.command(name="log")
-    @commands.guildowner()
-    async def whitelist_log(self, ctx, channel: discord.TextChannel):
-        """Select which channel whitelist changes will be logged to!"""
-        guild_config = self.config.guild(ctx.guild)
-        await guild_config.logging_channel.set(channel.id)
-        await ctx.send(f"**Whitelist changes will be logged to `{channel}`**")
-
-    @pastures.group(name="whitelist", autohelp=True, aliases=["white", "allow", "allowlist"])
-    @commands.mod_or_permissions(manage_guild=True)
-    async def whitelist(self, ctx):
-        """Whitelist players on the server"""
-
-    @whitelist.command(name="add")
-    @commands.mod_or_permissions(manage_guild=True)
-    async def add(self, ctx, player_name):
+    @app_commands.guild_only()
+    @whitelist.command(name="add", description="Add a player to the whitelist")
+    async def add(self, interaction: discord.Interaction, server: str, player: str):
         """ Add a player to the whitelist
 
         **player_name** - The player name to be **added** to the whitelist!
         """
-        guild_config = self.config.guild(ctx.guild)
+        guild_config = self.config.guild(interaction.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
-        role = ctx.guild.get_role(await guild_config.moderation_role())
+        role = interaction.guild.get_role(await guild_config.moderation_role())
 
-        if role in ctx.author.roles:
-            embed = await embed_helpers.whitelist_add(ip, key, player_name)
-            await ctx.send(embed=embed)
+        if role in interaction.user.roles:
+            embed = await embed_helpers.whitelist_add(ip, key, player)
+            await interaction.response.send_message(embed=embed)
 
-    @whitelist.command(name="remove")
-    @commands.mod_or_permissions(manage_guild=True)
-    async def remove(self, ctx, player_name):
+    @app_commands.guild_only()
+    @whitelist.command(name="remove", description="Remove a player from the whitelist")
+    async def remove(self, interaction: discord.Interaction, server: str, player: str):
         """ Remove a player from the whitelist
 
         **player_name** - The player name to be **removed** from the whitelist!
         """
-        guild_config = self.config.guild(ctx.guild)
+        guild_config = self.config.guild(interaction.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
-        role = ctx.guild.get_role(await guild_config.moderation_role())
+        role = interaction.guild.get_role(await guild_config.moderation_role())
 
-        if role in ctx.author.roles:
-            embed = await embed_helpers.whitelist_remove(ip, key, player_name)
-            await ctx.send(embed=embed)
+        if role in interaction.user.roles:
+            embed = await embed_helpers.whitelist_remove(ip, key, player)
+            await interaction.response.send_message(embed=embed)
 
-    @whitelist.command(name="list")
-    @commands.mod_or_permissions(manage_guild=True)
-    async def list(self, ctx):
+    @app_commands.guild_only()
+    @whitelist.command(name="list", description="List the current whitelist")
+    async def list(self, interaction: discord.Interaction):
         """ List the current whitelist
         """
-        guild_config = self.config.guild(ctx.guild)
+        guild_config = self.config.guild(interaction.guild)
         ip = await guild_config.host()
         key = await guild_config.apikey()
         color = await guild_config.embed_colour()
         role_id = await guild_config.moderation_role()
-        role = ctx.guild.get_role(role_id)
+        role = interaction.guild.get_role(role_id)
 
-        if role in ctx.author.roles:
+        if role in interaction.user.roles:
             embed = await embed_helpers.whitelist_list(ip, key, color)
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)

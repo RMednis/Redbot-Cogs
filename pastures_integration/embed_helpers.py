@@ -164,14 +164,18 @@ async def whitelist_add(ip: str, key: str, username: str):
 async def online_players(ip: str, key: str, message: str, color, image, text: str, words: list[str]):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
+
+    # General catch for any errors that might occur
     except RuntimeError as err:
         return await error_embed("Problem Connecting to server!", err, color)
 
+    # Catch for timeouts
     except asyncio.TimeoutError:
         return await error_embed("Problem Connecting to server!", "Network timeout error!", color)
 
     players = await minecraft_helpers.player_count(data)
 
+    # The description of the embed, based on the player count and adds a random word from the list
     description = f"{players['current']}/{players['max']} People {random.choice(words)}!"
 
     embed = customEmbed(title=text,
