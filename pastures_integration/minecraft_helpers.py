@@ -91,14 +91,21 @@ async def whitelist_success(response_string: str):
     if response_string.startswith("Added"):
         return True
     else:
-        return False
+        if response_string.startswith("Player"):
+            raise RuntimeError(f"Player %s is already whitelised!")
+        elif response_string.startswith("That player does not exist"):
+            raise RuntimeError(f"Player %s does not exist!")
 
 
 async def whitelist_remove_success(response_string: str):
     if response_string.startswith("Removed"):
         return True
     else:
-        return False
+        if response_string.startswith("Player"):
+            raise RuntimeError(f"Player %s is not whitelised!")
+        elif response_string.startswith("That player does not exist"):
+            raise RuntimeError(f"Player %s does not exist!")
+
 
 
 # Async Wrapper Function
