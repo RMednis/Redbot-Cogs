@@ -111,17 +111,22 @@ async def whitelist_remove(ip: str, key: str, username: str):
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
         response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist remove {name}")
-        if not await minecraft_helpers.whitelist_remove_success(response):
-            raise RuntimeError(f"Player `{name}` was not whitelisted!")
+        await minecraft_helpers.whitelist_remove_success(response)
+
+        embed = customEmbed(title=f"Player removed from whitelist!",
+                            description=f":green_circle: Successfully removed player `{name}` from the whitelist!",
+                            timestamp=datetime.datetime.utcnow(),
+                            colour=0x7BC950).pastures_footer()
+        return embed
 
     except RuntimeError as err:
-        return await error_embed("Whitelist Error!", err)
 
-    embed = customEmbed(title=f"Player removed from whitelist!",
-                        description=f":green_circle: Successfully removed player `{name}` from the whitelist!",
-                        timestamp=datetime.datetime.utcnow(),
-                        colour=0x7BC950).pastures_footer()
-    return embed
+        # If the error needs to be formatted with the username
+        if "%s" in str(err):
+            return await error_embed("Whitelist Error!", str(err) % f"`{username}`")
+
+        # Else, just return the error
+        return await error_embed("Whitelist Error!", err)
 
 
 async def whitelist_add(ip: str, key: str, username: str):
@@ -129,17 +134,22 @@ async def whitelist_add(ip: str, key: str, username: str):
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
         response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist add {name}")
-        if not await minecraft_helpers.whitelist_success(response):
-            raise RuntimeError(f"Player `{name}` already whitelisted!")
+
+        await minecraft_helpers.whitelist_success(response)
+
+        embed = customEmbed(title="Player Whitelisted!",
+                                description=f":green_circle:  Successfully whitelisted player `{name}`",
+                                timestamp=datetime.datetime.utcnow(),
+                                colour=0x7BC950).pastures_footer()
+        return embed
 
     except RuntimeError as err:
-        return await error_embed("Whitelist Error!", err)
+        # If the error needs to be formatted with the username
+        if "%s" in str(err):
+            return await error_embed("Whitelist Error!", str(err) % f"`{username}`")
 
-    embed = customEmbed(title="Player Whitelisted!",
-                        description=f":green_circle:  Successfully whitelisted player `{name}`",
-                        timestamp=datetime.datetime.utcnow(),
-                        colour=0x7BC950).pastures_footer()
-    return embed
+        # Else, just return the error
+        return await error_embed("Whitelist Error!", err)
 
 
 async def online_players(ip: str, key: str, message: str, color, image, text: str, words: list[str]):
