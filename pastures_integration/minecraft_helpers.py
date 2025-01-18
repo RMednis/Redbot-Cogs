@@ -42,11 +42,11 @@ async def check_name(input: str):
     except mojang.errors.MojangError as err:
         logging.error(f"Error occurred while trying to resolve the username `{input}`: {err}")
         if "HTTP 429" in str(err):
-            raise RuntimeError("Mojang API rate limit reached! \n\nCool it down and try again in a bit..")
+            raise RuntimeError("Mojang API rate limit reached! \n Cool it down and try again in a bit..")
         elif "HTTP 404" in str(err):
-            raise RuntimeError(f"Could not find user `{input}`. \n\nEither the username does not exist or you misstyped it.")
+            raise RuntimeError(f"Could not find user `{input}`. \n Either the username does not exist or you misstyped it.")
         else:
-            raise RuntimeError(f"Mojang API call failed to find `{input}`. \nA unknwon error occoured.")
+            raise RuntimeError(f"Mojang API call failed to find `{input}`. \n A unknwon error occoured.")
 
 async def split_names(input: str):
     input.strip(" ")
