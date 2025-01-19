@@ -21,7 +21,7 @@ class customEmbed(discord.Embed):
     def pastures_thumbnail(self, image=logo):
         return self.set_thumbnail(url=image)
 
-    def embed_caller(self, user: discord.Member|discord.User):
+    def embed_caller(self, user: discord.Member):
         self.add_field(name="Performed by:", value=f"**{user.display_name}** - `{user.id}`", inline=False)
         return
 
