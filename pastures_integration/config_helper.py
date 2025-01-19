@@ -13,9 +13,9 @@ class ConfigError(Exception):
 class EmbedConfig:
     channel_id: int = 0
     message_id: int = 0
-    title: str = "Example Server Embed"
-    description: str = "Example Description"
-    image: str = ""
+    title: str = "Example Server Title"
+    description: str = "Example Server Description - {pcur}/{pmax} players {messages}"
+    image: str = "https://file.mednis.network/static_assets/main-logo-mini.png"
     messages: list = field(default_factory=list)
     show_ip: bool = False
     public_ip: str = ""
@@ -61,3 +61,9 @@ class ServerConfig:
     @classmethod
     def default_config(cls) -> "ServerConfig":
         return cls()
+
+def clear_ids(config: dict):
+    config = ServerConfig.from_json(config)
+    config.embed.channel_id = 0
+    config.embed.message_id = 0
+    return config.to_json()

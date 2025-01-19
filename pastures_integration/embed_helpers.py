@@ -16,13 +16,13 @@ logo = "https://file.mednis.network/static_assets/main-logo-mini.png"
 
 class customEmbed(discord.Embed):
     def pastures_footer(self):
-        return self.set_footer(text="GP Logger 1.3.4", icon_url=logo)
+        return self.set_footer(text="GP Logger 2.0.0", icon_url=logo)
 
     def pastures_thumbnail(self, image=logo):
         return self.set_thumbnail(url=image)
 
-    def embed_caller(self, user: discord.Member):
-        self.add_field(name="_Performed by:_", value=user.display_name)
+    def embed_caller(self, user: discord.Member|discord.User):
+        self.add_field(name="Performed by:", value=f"**{user.display_name}** - `{user.id}`", inline=False)
         return
 
 
@@ -46,14 +46,14 @@ async def error_embed(title: str, error: Union[Exception, str], colour=0xe74c3c)
                        timestamp=datetime.datetime.utcnow(), colour=colour).pastures_footer()
 
 
-async def ping_embed(ip: str, key: str):
+async def ping_embed(name: str, ip: str, key: str):
     error = ""
     data = ""
 
-    embed = customEmbed(title="Server Ping Status",
+    embed = customEmbed(title=f"`{name}` - Ping Status",
                         description="Server response speed to RCON commands, this is done locally and does not "
                                     "guarantee that the server is reachable from the outside!"
-                                    f"\n**Server IP:** `{ip}`",
+                                    f"\n**Internal IP:** `{ip}`",
                         colour=0x7BC950,
                         timestamp=datetime.datetime.utcnow()).pastures_footer()
 
@@ -81,16 +81,8 @@ async def ping_embed(ip: str, key: str):
     return embed
 
 
-async def reaction_embed():
-    return customEmbed(title="Reaction setup!",
-                       description="React to this message with the emote(s) you wish to be used for one-click "
-                                   "whitelisting!",
-                       colour=0x7BC950) \
-        .pastures_footer()
-
-
 # The actual embeds we post in situations!
-async def whitelist_list(ip: str, key: str, color):
+async def whitelist_list(server: str, ip: str, key: str, color):
     try:
         response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist list")
         players = await minecraft_helpers.whitelisted_players(response)
@@ -100,7 +92,7 @@ async def whitelist_list(ip: str, key: str, color):
 
     description = f"{players['count']} player(s) whitelisted!"
 
-    embed = customEmbed(title="Whitelist",
+    embed = customEmbed(title=f"`{server}` - Whitelist",
                         description=description,
                         timestamp=datetime.datetime.utcnow(),
                         colour=color) \
@@ -115,17 +107,21 @@ async def whitelist_list(ip: str, key: str, color):
     return embed
 
 
-async def whitelist_remove(ip: str, key: str, username: str):
+async def whitelist_remove(ip: str, key: str, username: str, server: str, user: discord.Member = None):
     try:
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
         response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist remove {name}")
         await minecraft_helpers.whitelist_remove_success(response)
 
-        embed = customEmbed(title=f"Player removed from whitelist!",
+        embed = customEmbed(title=f"`{server}` - Player removed from whitelist!",
                             description=f":green_circle: Successfully removed player `{name}` from the whitelist!",
                             timestamp=datetime.datetime.utcnow(),
                             colour=0x7BC950).pastures_footer()
+
+        if user:
+            embed.embed_caller(user)
+
         return embed
 
     except RuntimeError as err:
@@ -138,7 +134,7 @@ async def whitelist_remove(ip: str, key: str, username: str):
         return await error_embed("Whitelist Error!", err)
 
 
-async def whitelist_add(ip: str, key: str, username: str):
+async def whitelist_add(ip: str, key: str, username: str, server: str, user: discord.Member= None):
     try:
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
@@ -146,22 +142,44 @@ async def whitelist_add(ip: str, key: str, username: str):
 
         await minecraft_helpers.whitelist_success(response)
 
-        embed = customEmbed(title="Player Whitelisted!",
+        embed = customEmbed(title=f"`{server}` - Player Whitelisted!",
                                 description=f":green_circle:  Successfully whitelisted player `{name}`",
                                 timestamp=datetime.datetime.utcnow(),
                                 colour=0x7BC950).pastures_footer()
+        if user:
+            embed.embed_caller(user)
         return embed
 
     except RuntimeError as err:
         # If the error needs to be formatted with the username
         if "%s" in str(err):
-            return await error_embed("Whitelist Error!", str(err) % f"`{username}`")
+            errorembed = await error_embed("Whitelist Error!", str(err) % f"`{username}`")
+            if user:
+                errorembed.embed_caller(user)
+            return errorembed
 
         # Else, just return the error
-        return await error_embed("Whitelist Error!", err)
+        errorembed = await error_embed("Whitelist Error!", err)
+        if user:
+            errorembed.embed_caller(user)
+        return errorembed
+
+async def online_player_status(config: dict, ip: str, key: str, message: str):
+    embed = config["config"]["embed"]
+    color = embed["color"]
+    image = embed["image"]
+    title = embed["title"]
+    description = embed["description"]
+    show_ip = embed["show_ip"]
+    public_ip = embed["public_ip"]
+    words = embed["messages"]
+
+    # Get the stored channel and message id
+    return await online_players(ip, key, message, color, image, title, description, words, show_ip, public_ip)
 
 
-async def online_players(ip: str, key: str, message: str, color, image, text: str, words: list[str]):
+async def online_players(ip: str, key: str, message: str, color, image: str, title: str, description: str, words: list[str],
+                         show_ip: bool, public_ip: str):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
 
@@ -174,11 +192,14 @@ async def online_players(ip: str, key: str, message: str, color, image, text: st
         return await error_embed("Problem Connecting to server!", "Network timeout error!", color)
 
     players = await minecraft_helpers.player_count(data)
+    pmax = players["max"]
+    pcur = players["current"]
+    words = random.choice(words)
 
     # The description of the embed, based on the player count and adds a random word from the list
-    description = f"{players['current']}/{players['max']} People {random.choice(words)}!"
+    description = str.format(description, pcur=pcur,pmax=pmax, messages=words)
 
-    embed = customEmbed(title=text,
+    embed = customEmbed(title=title,
                         description=description,
                         timestamp=datetime.datetime.utcnow(),
                         colour=color) \
@@ -189,7 +210,11 @@ async def online_players(ip: str, key: str, message: str, color, image, text: st
     for name in players["names"]:
         player_name_string += f"`{name}`\n"
 
+    if show_ip:
+        embed.add_field(name="Address:", value=f"`{public_ip}`", inline=False)
+
     embed.add_field(name="Currently Online:",
                     value=player_name_string + f"\n{message}")
 
     return embed
+

@@ -72,7 +72,7 @@ async def whitelisted_players(response_string: str):
         w_number = 0
 
     if w_number > 0:
-        players_raw = response_string.split("players:", 1)[1]
+        players_raw = response_string.split(":", 1)[1]
 
         players = players_raw.split(",")  # Split each player into own array element
         w_players = [player.strip(' ') for player in players]  # Strip spaces from names
