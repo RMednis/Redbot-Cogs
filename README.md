@@ -10,8 +10,8 @@ Random cogs and things for RedBot V3... Mainly meant for greener pastures server
 Minecraft server status, online player list, and whitelisting cog for redbot using a rcon connection.
 Supports custom, persistent embeds that auto update with the currently online players, as well as a lot of other features.
 
-> [!WARNING]  
-> This cog works on Redbot 3.5 but has not been updated to use slash commands
+> [!IMPORTANT]  
+> This cog only uses slash commands!
 
 > More information in `pastures_integration/README.md`
 
