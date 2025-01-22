@@ -425,13 +425,15 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
 
+        await interaction.response.defer()
+
         for s in servers:
             if s["name"] == server_name:
                 ip = s["ip"]
                 key = s["key"]
 
                 # Defer the response - The ping can take a while!
-                await interaction.response.defer()
+
 
                 ping_embed = await embed_helpers.ping_embed(server_name, ip, key)
 
@@ -440,7 +442,7 @@ class PasturesIntegration(commands.Cog):
 
                 return
 
-        await interaction.response.send_message(f"Server `{server_name}` not found!")
+        await interaction.followup.send(f"Server `{server_name}` not found!")
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)
@@ -451,14 +453,16 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
 
+        await interaction.response.defer()
+
         for s in servers:
             if s["name"] == server:
                 embed = await embed_helpers.online_player_status(s, s["ip"], s["key"],
                                                                  "_This message will not update._")
-                await interaction.response.send_message(embed=embed)
+                await interaction.followup.send(embed=embed)
                 return
 
-        await interaction.response.send_message(f"Server `{server}` not found!")
+        await interaction.followup.send(f"Server `{server}` not found!")
 
 
     whitelist = app_commands.Group(name="whitelist",
@@ -475,15 +479,17 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
 
+        await interaction.response.defer()
+
         for s in servers:
             if s["name"] == server:
                 ip = s["ip"]
                 key = s["key"]
                 embed = await embed_helpers.whitelist_add(ip, key, player, server)
-                await interaction.response.send_message(embed=embed)
+                await interaction.followup.send(embed=embed)
                 return
         else:
-            await interaction.response.send_message(f"Server `{server}` not found!")
+            await interaction.followup.send(f"Server `{server}` not found!")
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)
@@ -495,17 +501,19 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
 
+        await interaction.response.defer()
+
         for s in servers:
             if s["name"] == server:
                 ip = s["ip"]
                 key = s["key"]
 
                 embed = await embed_helpers.whitelist_remove(ip, key, player, server)
-                await interaction.response.send_message(embed=embed)
+                await interaction.followup.send(embed=embed)
                 return
 
         else:
-            await interaction.response.send_message(f"Server `{server}` not found!")
+            await interaction.followup.send(f"Server `{server}` not found!")
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import aiomcrcon
 
@@ -116,12 +117,16 @@ async def run_rcon_command(ip: str, key: str, command: str):
         await client.connect()
     except (aiomcrcon.RCONConnectionError, aiomcrcon.IncorrectPasswordError):
         raise RuntimeError("Error connecting to server!")
+    except asyncio.TimeoutError:
+        raise RuntimeError("Network/Server timeout! (Response took >2 seconds)")
 
     try:
         response = await client.send_cmd(command)
 
     except aiomcrcon.ClientNotConnectedError:
         raise RuntimeError("Error connecting to server!")
+    except asyncio.TimeoutError:
+        raise RuntimeError("Network/Server timeout! (Response took >2 seconds)")
 
     await client.close()
     return response[0]
