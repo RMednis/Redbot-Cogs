@@ -128,10 +128,10 @@ async def whitelist_remove(ip: str, key: str, username: str, server: str, user: 
 
         # If the error needs to be formatted with the username
         if "%s" in str(err):
-            return await error_embed("Whitelist Error!", str(err) % f"`{username}`")
+            return await error_embed(f"{server} - Whitelist Error!", str(err) % f"`{username}`")
 
         # Else, just return the error
-        return await error_embed("Whitelist Error!", err)
+        return await error_embed(f"{server} - Whitelist Error!", err)
 
 
 async def whitelist_add(ip: str, key: str, username: str, server: str, user: discord.Member= None):
@@ -153,13 +153,13 @@ async def whitelist_add(ip: str, key: str, username: str, server: str, user: dis
     except RuntimeError as err:
         # If the error needs to be formatted with the username
         if "%s" in str(err):
-            errorembed = await error_embed("Whitelist Error!", str(err) % f"`{username}`")
+            errorembed = await error_embed(f"`{server}` - Whitelist Error!", str(err) % f"`{username}`")
             if user:
                 errorembed.embed_caller(user)
             return errorembed
 
         # Else, just return the error
-        errorembed = await error_embed("Whitelist Error!", err)
+        errorembed = await error_embed(f"`{server}` - Whitelist Error!", err)
         if user:
             errorembed.embed_caller(user)
         return errorembed
