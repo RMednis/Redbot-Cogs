@@ -81,6 +81,10 @@ class PasturesIntegration(commands.Cog):
                 channel_id = server_config["config"]["embed"]["channel_id"]
                 message_id = server_config["config"]["embed"]["message_id"]
 
+                if channel_id == 0 or message_id == 0:
+                    # No channel or message id stored, skip this server
+                    continue
+
                 try:
                     channel = guild.get_channel(channel_id)
                     message = await channel.fetch_message(message_id)
