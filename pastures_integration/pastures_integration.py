@@ -289,7 +289,7 @@ class PasturesIntegration(commands.Cog):
                 s["config"]["one_click_emoji"] = emote
 
                 await guild_config.servers.set(servers)
-                await interaction.response.send_message(f"Emote for {server} set to {emote}")
+                await interaction.response.send_message(f"Emote for `{server}` set to {emote} `({emote})`!")
                 return
 
         await interaction.response.send_message(f"Server `{server}` not found!")
