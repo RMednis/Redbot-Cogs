@@ -156,19 +156,24 @@ class PasturesIntegration(commands.Cog):
             }
 
         if servers is None:
+            # This is the first server added
+            # We create the list and add the server
             servers = [json_string]
             await guild_config.servers.set(servers)
-            await interaction.response.send_message(f"Server {server} added!")
+            await interaction.response.send_message(f"Server `{server}` added!")
 
         else :
+            # Check if the server already exists
             for s in servers:
-                if s["name"] == server:
-                    await interaction.response.send_message(f"Server {server} already exists!")
+                # We check both the exact name and a case-insensitive name, just in case
+                if s["name"] == server or s["name"].lower() == server.lower():
+                    await interaction.response.send_message(f"Server `{server}` already exists!")
                     return
 
+            # It doesn't exist, add it!
             servers.append(json_string)
             await guild_config.servers.set(servers)
-            await interaction.response.send_message(f"Server {server} added!")
+            await interaction.response.send_message(f"Server `{server}` added!")
     @app_commands.guild_only()
     @servers.command(name="list", description="List all servers added to the bot!")
     async def server_list(self, interaction: discord.Interaction):
@@ -201,6 +206,7 @@ class PasturesIntegration(commands.Cog):
         servers = await guild_config.servers()
 
         for s in servers:
+
             if s["name"] == server_name:
                 if ip is not None:
                     s["ip"] = ip
@@ -218,16 +224,17 @@ class PasturesIntegration(commands.Cog):
                         # Save the config to the server object
                         s["config"] = settings
 
-                    except config_helper.ConfigError as err:
-                        await interaction.response.send_message(f"Error parsing config file: {err}")
+                        await guild_config.servers.set(servers)
+                        await interaction.response.send_message(f"Server `{server_name}` edited!")
                         return
 
-            else:
-                await interaction.response.send_message(f"Server `{server_name}` not found!")
-                return
+                    except config_helper.ConfigError as err:
+                        await interaction.response.send_message(f"Error parsing config file: `{err}`")
+                        return
 
-        await guild_config.servers.set(servers)
-        await interaction.response.send_message("Server edited!")
+        # No server found
+        await interaction.response.send_message(f"Server `{server_name}` not found!")
+        return
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)
@@ -277,8 +284,12 @@ class PasturesIntegration(commands.Cog):
             if s["name"] == server:
                 s["config"]["one_click_emoji"] = emote
 
-        await guild_config.servers.set(servers)
-        await interaction.response.send_message(f"Emote for {server} set to {emote}")
+                await guild_config.servers.set(servers)
+                await interaction.response.send_message(f"Emote for {server} set to {emote}")
+                return
+
+        await interaction.response.send_message(f"Server `{server}` not found!")
+        return
 
     @app_commands.guild_only()
     @app_commands.describe(role="The role a user needs to have to use one-click whitelisting")
@@ -367,11 +378,15 @@ class PasturesIntegration(commands.Cog):
 
                     await interaction.response.send_message(f"Embed sent in {channel.mention}!\n"
                                                             f"It should update every minute!")
+                    return
 
                 except discord.HTTPException as HttpErr:
                     log.error("Error sending message: ", HttpErr)
                     await interaction.response.send_message(f"Error sending message in {channel.mention}!")
                     return
+
+        await interaction.response.send_message(f"Server `{server}` not found!")
+        return
 
 
     @app_commands.guild_only()
@@ -389,10 +404,12 @@ class PasturesIntegration(commands.Cog):
         for s in servers:
             if s["name"] == server:
                 servers.remove(s)
+                await guild_config.servers.set(servers)
+                await interaction.response.send_message("Server removed!")
+                return
 
-        await guild_config.servers.set(servers)
-
-        await interaction.response.send_message("Server removed!")
+        await interaction.response.send_message(f"Server `{server}` not found!")
+        return
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server_name=server_autocomplete)
