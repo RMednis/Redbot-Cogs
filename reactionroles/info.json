@@ -1,0 +1,22 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Cog-Creators/Red-DiscordBot/V3/develop/schema/red_cog.schema.json",
+    "name": "ReactionRoles",
+    "short": "A reaction role and embed cog",
+    "description": "This cog allows you to create reaction roles and embeds for announcements or self serve role picking.",
+    "end_user_data_statement": "This cog does not persistently store any data or metadata about users.",
+    "install_msg": "Whoop!",
+    "author": [
+        "Mednis"
+    ],
+    "required_cogs": {},
+    "requirements": [],
+    "tags": [
+        "Reaction",
+        "Embed",
+        "Announcements"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}
