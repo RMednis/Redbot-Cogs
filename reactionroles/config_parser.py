@@ -112,7 +112,7 @@ async def parse_config(config: dict) -> bool:
 
         for role in config["reaction_roles"]:
             try:
-                await check_keys(role, ["emoji", "role", "unique"])
+                await check_keys(role, ["emoji", "role", "unique", "allowlist", "denylist"])
             except ConfigError as e:
                 raise ConfigError(f"`reaction_roles` > `{role}` error: {e}")
 
@@ -122,6 +122,12 @@ async def parse_config(config: dict) -> bool:
             if not isinstance(role["unique"], bool):
                 raise ConfigError(f"`reaction_roles` > `{role}` unique must be an boolean")
 
+            if not isinstance(role["allowlist"], list):
+                raise ConfigError(f"`reaction_roles` > `{role}` allowlist must be an list")
+
+            if not isinstance(role["denylist"], list):
+                raise ConfigError(f"`reaction_roles` > `{role}` denylist must be an list")
+
     return True
 
 async def default_config() -> dict:
@@ -130,14 +136,14 @@ async def default_config() -> dict:
             "channel": "",
             "message": "",
 
-            "title_text": "Example Embed",
+            "title_text": "This is an example embed",
             "title_url": "",
 
-            "author_name": "Example Author",
+            "author_name": "MedsBot Embeds and Reaction Roles",
             "author_url": "",
             "author_icon": "",
 
-            "description": "Example Description",
+            "description": "You should edit this embed to your liking by using the `/embed edit` command.",
             "thumbnail": "https://placedog.net/250/250/?id=17",
             "image": "https://placedog.net/500/500/?id=19",
 
@@ -146,29 +152,25 @@ async def default_config() -> dict:
             "fields": [
                 {
                     "name": "Example Field",
-                    "value": "This is a velue for a field",
+                    "value": "This is an example field, you can add up to 10 fields to an embed.",
                     "inline": False
                 }
             ],
 
             "footer_icon": "https://placedog.net/500/500/?id=19",
             "footer_text": "This is footer text",
-            "timestamp": "2025-01-01T00:00:00",
-
-            "reaction_roles":[
-                {
-                    "emoji": "",
-                    "role": "",
-                    "unique": True
-                }
-            ]
+            "timestamp": "2025-01-01T00:00:00"
     }
 
 async def create_reaction_role(emoji: str, role: int, unique: bool) -> dict:
+
+
     return {
         "emoji": emoji,
         "role": role,
-        "unique": unique
+        "unique": unique,
+        "allowlist": [],
+        "denylist": []
     }
 
 async def create_embed(config: dict) -> discord.Embed:

@@ -222,7 +222,8 @@ class ReactionRoles(commands.Cog):
 
     @app_commands.autocomplete(name=embed_autocomplete)
     @embed.command(name="add_reaction", description="Add a reaction role to an existing embed")
-    async def embed_add_reaction(self, interaction: discord.Interaction, name: str, emoji: str, role: discord.Role, unique: bool = False):
+    async def embed_add_reaction(self, interaction: discord.Interaction, name: str, emoji: str, role: discord.Role,
+                                 unique: bool = False):
 
         await interaction.response.defer()
         embed_configs = await self.config.guild(interaction.guild).embeds()
@@ -276,8 +277,11 @@ class ReactionRoles(commands.Cog):
                     # Add the reaction, if it fails, it's likely an invalid emoji
                     await message.add_reaction(emoji)
 
+                    # Reaction role data
+                    role_data = await config_parser.create_reaction_role(str(partial_emoji), role.id, unique)
+
                     # Add the reaction role
-                    reaction_roles.append(await config_parser.create_reaction_role(str(partial_emoji), role.id, unique))
+                    reaction_roles.append(role_data)
 
                     # Update the config
                     for i, embed in enumerate(embed_configs):
@@ -382,6 +386,25 @@ class ReactionRoles(commands.Cog):
             if reaction_role["emoji"] == str(payload.emoji):
                 guild = self.bot.get_guild(payload.guild_id)
                 member = guild.get_member(payload.user_id)
+
+                if len(reaction_role["denylist"]) > 0:
+                    for role in reaction_role["denylist"]:
+                        denylist_role = guild.get_role(role)
+                        if denylist_role in member.roles:
+                            return # Do nothing if the user has a denylisted role
+
+
+                if len(reaction_role["allowlist"]) > 0:
+                    allowed = False
+                    for role in reaction_role["allowlist"]:
+                        allowlist_role = guild.get_role(role)
+                        if allowlist_role in member.roles:
+                            # Allow the user to get the role
+                            allowed = True
+                            break
+                    if not allowed:
+                        return  # Do nothing if the user does not have an allowlisted role
+
                 added_role = guild.get_role(reaction_role["role"])
 
                 # Remove all other roles if unique is set on the added role
@@ -390,8 +413,7 @@ class ReactionRoles(commands.Cog):
                     channel = guild.get_channel(config["channel"])
                     message = await channel.fetch_message(config["message"])
 
-                    roles_to_remove = []
-
+                    roles_to_remove = [] # Cache the roles to remove so we can remove them all at once
                     for role in config["reaction_roles"]:
                         if role["emoji"] != str(payload.emoji):
                             # Remove the reaction
@@ -401,9 +423,11 @@ class ReactionRoles(commands.Cog):
                             removed_role = guild.get_role(role["role"])
                             roles_to_remove.append(removed_role)
 
+                    # Remove the roles, send the reason to the modlog
                     await member.remove_roles(*roles_to_remove, reason=f"Unique reaction role {reaction_role['role']}"
                                                                    f" in embed {config['name']}")
 
+                # Add the role
                 await member.add_roles(added_role, reason=f"Reaction Role in embed {config['name']}")
                 return
 
