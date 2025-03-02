@@ -132,7 +132,7 @@ class ReactionRoles(commands.Cog):
     async def embed_edit(self, interaction: discord.Interaction, name: str, config: discord.Attachment = None):
         embed_configs = await self.config.guild(interaction.guild).embeds()
 
-        await interaction.followup.defer()
+        await interaction.response.defer()
 
         if not await config_parser.embed_exists(embed_configs, name):
             return await interaction.followup.send(f"Embed `{name}` does not exist."
