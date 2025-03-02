@@ -390,9 +390,19 @@ class ReactionRoles(commands.Cog):
                     channel = guild.get_channel(config["channel"])
                     message = await channel.fetch_message(config["message"])
 
+                    roles_to_remove = []
+
                     for role in config["reaction_roles"]:
                         if role["emoji"] != str(payload.emoji):
+                            # Remove the reaction
                             await message.remove_reaction(role["emoji"], member)
+
+                            # Remove the role
+                            removed_role = guild.get_role(role["role"])
+                            roles_to_remove.append(removed_role)
+
+                    await member.remove_roles(*roles_to_remove, reason=f"Unique reaction role {reaction_role['role']}"
+                                                                   f" in embed {config['name']}")
 
                 await member.add_roles(added_role, reason=f"Reaction Role in embed {config['name']}")
                 return
