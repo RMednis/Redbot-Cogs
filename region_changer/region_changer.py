@@ -102,6 +102,22 @@ class RegionChanger(commands.Cog):
 
         return [Choice(name=regions[region], value=region) for region in regions.keys() if current.lower() in region.lower()]
 
+    async def force_region_update(self, interaction: discord.Interaction) -> str:
+        if (interaction.channel.id not in await self.config.guild(interaction.guild).channel_whitelist() or not
+                isinstance(interaction.channel, discord.VoiceChannel)):
+            return "The channel you are in has is not on the whitelist/a voice channel. Did not perform region refresh."
+
+        else:
+            try:
+                await interaction.channel.edit(rtc_region="aaaa") # Invalid region to force a refresh
+                raise Exception("Region refresh failed, somehow the API did not return a 400 error.")
+
+            except discord.Forbidden:
+                return "I don't have permission to change the region of this channel."
+
+            except discord.HTTPException as e:
+                await self.update_region_list(e)
+                return "Region list updated."
 
     @app_commands.guild_only()
     @region_settings.command(name="enable", description="Enable the region changer")
@@ -145,26 +161,11 @@ class RegionChanger(commands.Cog):
             channel_diff = len(channels) - len(channels_new)
             await self.config.guild(guild).channel_whitelist.set(channels_new)
 
-        if (interaction.channel.id not in await self.config.guild(interaction.guild).channel_whitelist() or not
-                isinstance(interaction.channel, discord.VoiceChannel)):
-            region_update_string = "The channel you are in has is not on the whitelist/a voice channel. Did not perform region refresh. \n"
-
-        else:
-            region_update_string = "The channel you are in is on the whitelist. Performing region refresh. \n"
-            try:
-                await interaction.channel.edit(rtc_region="aaaa") # Invalid region to force a refresh
-                region_update_string = "Region refresh failed, somehow the API did not return a 400 error. \n"
-
-            except discord.Forbidden:
-                region_update_string += "I don't have permission to change the region of this channel"
-
-            except discord.HTTPException as e:
-                await self.update_region_list(e)
-                region_update_string += "Region list updated.\n"
+        region_messages = await self.force_region_update(interaction)
 
         await interaction.response.send_message(f"Cleaned the channel whitelist. \n"
                                                 f"Removed {channel_diff} channels \n"
-                                                f"{region_update_string}")
+                                                f"{region_messages}")
 
     @app_commands.guild_only()
     @app_commands.checks.cooldown(1, 10, key=lambda i: i.user.id)
@@ -191,6 +192,10 @@ class RegionChanger(commands.Cog):
                                                            ephemeral=True)
         # Check if the region is valid
         if region_name not in await self.config.regions():
+
+            if await self.config.regions() == {}:
+                await self.force_region_update(interaction)
+
             return await interaction.response.send_message(f"Invalid region `{region_name}`. \n"
                                                            f"Available regions: `{', '.join(await self.config.regions())}`",
                                                            ephemeral=True)
