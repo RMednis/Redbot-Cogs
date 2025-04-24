@@ -173,15 +173,20 @@ async def online_player_status(config: dict, ip: str, key: str, message: str):
     show_ip = embed["show_ip"]
     public_ip = embed["public_ip"]
     words = embed["messages"]
+    check_status = embed["request_status"]
 
     # Get the stored channel and message id
-    return await online_players(ip, key, message, color, image, title, description, words, show_ip, public_ip)
+    return await online_players(ip, key, message, color, image, title, description, words, show_ip, public_ip, check_status)
 
 
 async def online_players(ip: str, key: str, message: str, color, image: str, title: str, description: str, words: list[str],
-                         show_ip: bool, public_ip: str):
+                         show_ip: bool, public_ip: str, check_status: bool = False):
     try:
         data = await minecraft_helpers.run_rcon_command(ip, key, "list")
+        if check_status:
+            server = await minecraft_helpers.lookup_server(ip)
+            motd = server.motd.to_plain()
+            version = server.version.name
 
     # General catch for any errors that might occur
     except RuntimeError as err:
@@ -194,10 +199,19 @@ async def online_players(ip: str, key: str, message: str, color, image: str, tit
     players = await minecraft_helpers.player_count(data)
     pmax = players["max"]
     pcur = players["current"]
-    words = random.choice(words)
+
+    if len(words) > 0:
+        # Randomly Select a word from the list
+        words = random.choice(words)
+    else:
+        words = "No Messages Set!"
 
     # The description of the embed, based on the player count and adds a random word from the list
-    description = str.format(description, pcur=pcur,pmax=pmax, messages=words)
+    if check_status:
+        description = str.format(description, pcur=pcur, pmax=pmax, messages=words,
+                                 motd=motd.strip(), version=version)
+    else:
+        description = str.format(description, pcur=pcur,pmax=pmax, messages=words)
 
     embed = customEmbed(title=title,
                         description=description,

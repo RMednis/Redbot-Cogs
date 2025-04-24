@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import aiomcrcon
+from mcstatus import JavaServer
 
 import mojang
 
@@ -130,3 +131,11 @@ async def run_rcon_command(ip: str, key: str, command: str):
 
     await client.close()
     return response[0]
+
+async def lookup_server(ip: str):
+    server = JavaServer.lookup(ip)
+    try:
+        status = await server.async_status()
+        return status
+    except:
+        raise RuntimeError("Server status failed. Not reachable or offline!")
