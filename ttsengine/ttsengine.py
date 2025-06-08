@@ -543,6 +543,29 @@ class TTSEngine(commands.Cog):
                 except RuntimeError as err:
                     await interaction.response.send_message(err)
 
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.cooldown(1, 30, key=lambda i: i.user.id)
+    async def summon(self, interaction: discord.Interaction):
+        """
+        Summon the bot to your voice channel.
+        """
+        if interaction.user.voice is None:
+            await interaction.response.send_message("❌ You must be in a voice channel to summon the bot.", ephemeral=True)
+            return
+
+        # Check if the user is blacklisted
+        blacklist = await self.config.guild(interaction.guild).blacklisted_users()
+        if interaction.user.id in blacklist:
+            return
+
+        # Try to connect to the user's voice channel
+        try:
+            await audio_manager.connect_ll(self, interaction.user.voice.channel)
+            await interaction.response.send_message(f" Connected to {interaction.user.voice.channel.mention}!", ephemeral=True)
+        except RuntimeError as err:
+            await interaction.response.send_message("❌ Failed to connect to your voice channel.", ephemeral=True)
+
 
 
     @app_commands.command()
