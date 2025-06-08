@@ -701,7 +701,7 @@ class TTSEngine(commands.Cog):
 
                     # Warn the user that they are not in a voice channel
                     await message.reply("❌ You are not in a VC, your messages will not be read out until you join."
-                                        , delete_after=5 * 60)
+                                        , delete_after = 10)
                     await self.config.user(message.author).warning_notts.set(True)
                     return
 
@@ -724,10 +724,10 @@ class TTSEngine(commands.Cog):
                         last_message_time):
 
                     # If the user has not been warned about the bot being in a different voice channel
-                    await message.reply("❌ The bot is already connected to a different voice channel. \n"
-                                        "Please use the `/summon` command to move it to your channel. \n"
-                                        "_(Do make sure the other VC is okay with it)_",
-                                        delete_after=5 * 60)
+                    await message.reply(f"❌ **I'm already in {voice_clients.channel.mention}.** \n"
+                                        f"Please use the `/summon` command to bring me here.\n"
+                                        f"_Also, make sure the people in the other channel are okay with it :D_",
+                                        delete_after = 30)
                     await self.config.user(message.author).warning_summon.set(True)
                     return
 
