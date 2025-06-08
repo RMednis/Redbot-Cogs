@@ -1,6 +1,7 @@
 import io
 import json
 import os
+from datetime import datetime, timezone
 from typing import Literal
 
 import discord
@@ -16,6 +17,7 @@ RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 
 log = logging.getLogger("red.mednis-cogs.poitranslator")
 
+cooldown = 10 * 60 # 10 minute cooldown between message to show alerts again
 
 class TTSEngine(commands.Cog):
     """
@@ -71,7 +73,10 @@ class TTSEngine(commands.Cog):
 
         # Default user configuration
         default_user = {
+            "last_tts_message_time": "",
             "tts_enabled": False,
+            "warning_summon": False,
+            "warning_notts": False,
             "voice": "Brian"
         }
         self.config.register_user(**default_user)
@@ -142,12 +147,11 @@ class TTSEngine(commands.Cog):
     @app_commands.guild_only()
     async def tts_set_voice(self, interaction: discord.Interaction, user: discord.Member, voice: str):
 
-        log.info(f"Setting TTS voice for {user} to {voice}")
-
         if interaction.user.id not in self.bot.owner_ids:
             await interaction.response.send_message("You are not authorized to use this command.", ephemeral=True)
             return
 
+        log.info(f"Setting TTS voice for {user} to {voice}")
         await self.config.user(user).voice.set(voice)
         await interaction.response.send_message(f"Set TTS voice for {user.mention} to `{voice}`.", ephemeral=True)
 
@@ -563,6 +567,7 @@ class TTSEngine(commands.Cog):
         try:
             await audio_manager.connect_ll(self, interaction.user.voice.channel)
             await interaction.response.send_message(f" Connected to {interaction.user.voice.channel.mention}!", ephemeral=True)
+            await self.config.user(interaction.user).warning_summon.set(False)
         except RuntimeError as err:
             await interaction.response.send_message("❌ Failed to connect to your voice channel.", ephemeral=True)
 
@@ -586,7 +591,7 @@ class TTSEngine(commands.Cog):
 
         # Check if User is not in a voice channel
         if interaction.user.voice is None:
-            await interaction.response.send_message("You must be in a voice channel to use TTS. ❌", ephemeral=True)
+            await interaction.response.send_message("❌ You must be in a voice channel to use TTS.", ephemeral=True)
             return
 
         # Sanity check the options since autocomplete is not mandatory
@@ -598,7 +603,7 @@ class TTSEngine(commands.Cog):
             elif voice_option["value"] == "Extra":
                 break
         else:
-            await interaction.response.send_message("Invalid voice selected. ❌", ephemeral=True)
+            await interaction.response.send_message("❌ Invalid voice selected.", ephemeral=True)
             return
 
         # Sanity check the extra voice options
@@ -607,30 +612,30 @@ class TTSEngine(commands.Cog):
                 if voice_option["value"] == extra:
                     break
             else:
-                await interaction.response.send_message("Invalid extra voice selected. ❌", ephemeral=True)
+                await interaction.response.send_message("❌ Invalid extra voice selected.", ephemeral=True)
                 return
 
         if voice == "Extra":
             if extra is not None:
                 voice = extra
             else:
-                await interaction.response.send_message("You must select a voice to use TTS. ❌", ephemeral=True)
+                await interaction.response.send_message("❌ You must select a voice to use TTS.", ephemeral=True)
                 return
 
         # If the user has TTS disabled
         if not await self.config.user(interaction.user).tts_enabled():
             # If the user has disabled TTS and wants to disable it
             if voice == "disable":
-                await interaction.response.send_message("TTS Was already disabled for you! ❌", ephemeral=True)
+                await interaction.response.send_message("❌ TTS Was already disabled for you!", ephemeral=True)
                 return
             # Enable TTS for the user and set the voice
             else:
                 await self.config.user(interaction.user).voice.set(voice)
                 await self.config.user(interaction.user).tts_enabled.set(True)
 
-                await interaction.response.send_message(f"You have enabled TTS and sound like `{voice}`. \n"
+                await interaction.response.send_message(f"✅ You have enabled TTS and sound like `{voice}`. \n"
                                                         f"Any messages you type in the voice channel text channels or no-mic"
-                                                        f" will be read out. ✅", ephemeral=True)
+                                                        f" will be read out.", ephemeral=True)
                 return
 
         # If the user has TTS enabled
@@ -639,15 +644,15 @@ class TTSEngine(commands.Cog):
             if voice == "disable":
 
                 await self.config.user(interaction.user).tts_enabled.set(False)
-                await interaction.response.send_message("Disabled TTS! ❌", ephemeral=True)
+                await interaction.response.send_message("❌ Disabled TTS!", ephemeral=True)
                 return
 
             # if the user has TTS enabled and wants to change the voice
             else:
                 await self.config.user(interaction.user).voice.set(voice)
-                await interaction.response.send_message(f"You have changed your TTS voice to `{voice}`. \n"
+                await interaction.response.send_message(f"✅ You have changed your TTS voice to `{voice}`. \n"
                                                         f"Any messages you type in the voice channel text channels or no-mic"
-                                                        f" will be read out. ✅", ephemeral=True)
+                                                        f" will be read out.", ephemeral=True)
 
     @tts_voice.autocomplete("voice")
     async def tts_voice_autocomplete(self, interaction: discord.Interaction, current: str):
@@ -680,16 +685,51 @@ class TTSEngine(commands.Cog):
         if message.author.id in await self.config.guild(message.guild).blacklisted_users():
             return
 
+        # Store the previous tts mesasge time
+        last_message_time = await self.config.user(message.author).last_tts_message_time()
+
+        # Update the last TTS message time
+        await self.config.user(message.author).last_tts_message_time.set(datetime.now(timezone.utc).isoformat())
+
         # If the message author has TTS enabled
         if await self.config.user(message.author).tts_enabled():
             # If the user is not in a voice channel
             if message.author.voice is None:
-                await message.reply("You have left a voice channel, TTS has been disabled for you.", delete_after=10)
-                await self.config.user(message.author).tts_enabled.set(False)
-                return
 
-            # Generate the TTS message and play it
-            await tts_api.generate_tts(self, message)
+                # Check if the user has been warned about not being in a voice channel
+                if not await self.config.user(message.author).warning_notts() or not await self.is_within_time(last_message_time):
+
+                    # Warn the user that they are not in a voice channel
+                    await message.reply("❌ You are not in a VC, your messages will not be read out until you join."
+                                        , delete_after=5 * 60)
+                    await self.config.user(message.author).warning_notts.set(True)
+                    return
+
+            voice_clients = discord.utils.get(self.bot.voice_clients, guild=message.guild)
+
+            # If the bot is not connected to a voice channel or in the same voice channel as the user
+            if voice_clients is None or voice_clients.channel == message.author.voice.channel:
+
+                # Reset the warning flags
+                await self.config.user(message.author).warning_summon.set(False)
+                await self.config.user(message.author).warning_notts.set(False)
+
+                # Generate the TTS message and play it
+                await tts_api.generate_tts(self, message)
+
+            # If the bot is connected to a different voice channel
+            elif voice_clients.channel != message.author.voice.channel:
+
+                if not await self.config.user(message.author).warning_summon() or not await self.is_within_time(
+                        last_message_time):
+
+                    # If the user has not been warned about the bot being in a different voice channel
+                    await message.reply("❌ The bot is already connected to a different voice channel. \n"
+                                        "Please use the `/summon` command to move it to your channel. \n"
+                                        "_(Do make sure the other VC is okay with it)_",
+                                        delete_after=5 * 60)
+                    await self.config.user(message.author).warning_summon.set(True)
+                    return
 
     async def lavalink_events(self, player, event: lavalink.LavalinkEvents, extra):
 
@@ -745,6 +785,24 @@ class TTSEngine(commands.Cog):
                 if self.current_track in player.queue:
                     await player.queue.remove(self.current_track)
                 await audio_manager.delete_file_and_remove(self, self.current_track)
+
+
+    async def is_within_time(self, last_message_time: str, time=5*60) -> bool:
+        """
+        Check if the users last message was within a specified time.
+        """
+
+        # If the last message time is not set, return False
+        if last_message_time == "":
+            return False
+
+        last_message_time = datetime.fromisoformat(last_message_time)
+
+        # Check if the last TTS message was within a specified time.
+        if (datetime.now(timezone.utc) - last_message_time).total_seconds() < time:
+            return True
+
+        return False
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
