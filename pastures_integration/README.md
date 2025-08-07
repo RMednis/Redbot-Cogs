@@ -64,7 +64,7 @@ The configuration is a json object that looks like this:
         "channel_id": 0,
         "message_id": 0,
         "title": "Example Server Embed",
-        "description": "{pcur}/{pmax} players {messages}",
+        "description": "$pcur/$pmax players $messages",
         "image": "https://file.mednis.network/static_assets/main-logo-mini.png",
         "messages": ["exploding!", "on fire!", "burning!", "lit!"],
         "show_ip": true,
