@@ -171,13 +171,14 @@ class PasturesIntegration(commands.Cog):
             for s in servers:
                 # We check both the exact name and a case-insensitive name, just in case
                 if s["name"] == server or s["name"].lower() == server.lower():
-                    await interaction.response.send_message(f"Server `{server}` already exists!")
+                    await interaction.response.send_message(f"A server named `{server}` already exists!")
                     return
 
             # It doesn't exist, add it!
             servers.append(json_string)
             await guild_config.servers.set(servers)
-            await interaction.response.send_message(f"Server `{server}` added!")
+            await interaction.response.send_message(f"Added a new server - `{server}`!\n"
+                                                    f"You should now Configure the server with `\server edit {server}`!")
     @app_commands.guild_only()
     @servers.command(name="list", description="List all servers added to the bot!")
     async def server_list(self, interaction: discord.Interaction):
@@ -189,14 +190,25 @@ class PasturesIntegration(commands.Cog):
         log.info(f"Servers: {servers}")
 
         if len(servers) == 0:
-            await interaction.response.send_message("No servers added!")
+            await interaction.response.send_message("There are no servers added!\n"
+                                                    "Use `\server add` to add a server!")
             return
 
         server_list = ""
         for s in servers:
-            server_list += f"`{s['name']}` - `{s['ip']}` \n"
+            server_list += f"`{s['name']}` - `{s['ip']}`\n"
 
-        await interaction.response.send_message(f"## Servers: \n {server_list}")
+        await interaction.response.send_message(f"**Currently added servers:** \n{server_list}"
+                                                f"\n-# You can always edit a server with: `\server edit <server_name>`")
+
+
+    async def get_server_config(self, config: dict, server_name: str) -> discord.File:
+        # Convert the config to a file-like object
+        json_payload = io.BytesIO(json.dumps(config, indent=4).encode('UTF-8'))
+        # File name is the server name, but lowercased and with spaces replaced with underscores
+        filename = f"{server_name.lower().replace(' ', '_')}_config.json"
+
+        return discord.File(json_payload, filename=filename)
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server_name=server_autocomplete)
@@ -208,15 +220,21 @@ class PasturesIntegration(commands.Cog):
     async def server_edit(self, interaction: discord.Interaction, server_name: str, ip: str = None, key: str = None, config: discord.Attachment = None):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
+        updated_variables = ""
 
         for s in servers:
 
-            if s["name"] == server_name:
+            if s["name"].strip() == server_name.strip():
                 if ip is not None:
+                    # The user provided a new IP, update it
                     s["ip"] = ip
+                    updated_variables += f"ip address,"
                 if key is not None:
+                    # The user provided a new key, update it
                     s["key"] = key
+                    updated_variables += f"RCON key,"
                 if config is not None:
+                    # The user provided a new config file, update it
                     try:
                         # Save the config to the server object
                         file_object = await config.read()
@@ -227,17 +245,36 @@ class PasturesIntegration(commands.Cog):
 
                         # Save the config to the server object
                         s["config"] = settings
-
                         await guild_config.servers.set(servers)
-                        await interaction.response.send_message(f"Server `{server_name}` edited!")
+                        updated_variables += f"config file,"
+
+                        if updated_variables:
+                            # We have updated some variables, save the server config
+                            await interaction.response.send_message(
+                                f"`{server_name}`'s `{updated_variables[:-1]}` was updated successfully!\n")
                         return
 
                     except config_helper.ConfigError as err:
                         await interaction.response.send_message(f"Error parsing config file: `{err}`")
                         return
 
+                else:
+                    if updated_variables:
+                        # We have updated some variables, save the server config
+                        await guild_config.servers.set(servers)
+                        await interaction.response.send_message(
+                            f"`{server_name}`'s `{updated_variables[:-1]}` was updated successfully!\n")
+                        return
+
+                    # No config file provided, just return the current config
+                    file = await self.get_server_config(s["config"], server_name)
+                    await interaction.response.send_message(f"**Here is the current configuration for `{server_name}`.**\n"
+                                                            f"You can edit this file and re-upload it via `\server edit {server_name}` to change it!",
+                                                            file=file)
+                    return
+
         # No server found
-        await interaction.response.send_message(f"Server `{server_name}` not found!")
+        await interaction.response.send_message(f"No server named `{server_name}` found!")
         return
 
     @app_commands.guild_only()
@@ -259,17 +296,14 @@ class PasturesIntegration(commands.Cog):
         else:
             for s in servers:
                 if s["name"] == server:
-                    # Convert the config to a file-like object
-                    json_payload = io.BytesIO(json.dumps(s["config"], indent=4).encode('UTF-8'))
-                    # File name is the server name, but lowercased and with spaces replaced with underscores
-                    filename = f"{server.lower().replace(' ','_')}_config.json"
+                    config = await self.get_server_config(s["config"], server)
+                    await interaction.response.send_message(f"**Here is the configuration for `{server}`.**\n"
+                                                            f"You can edit this file and re-upload it via `\server edit {server}` to change it!",
+                                                            file=config)
 
-                    await interaction.response.send_message(f"Server configuration for `{server}` attached!\n"
-                                                            f"**Edit this file and re-upload it to edit the server!**",
-                                                            file=discord.File(json_payload, filename=filename))
                     return
 
-            await interaction.response.send_message(f"Server `{server}` not found!")
+            await interaction.response.send_message(f"No server named `{server}` found!")
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)

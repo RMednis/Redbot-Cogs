@@ -69,6 +69,27 @@ async def parse_config(config: dict) -> bool:
     if not isinstance(config["name"], str):
         raise ConfigError("`name` must be a string")
 
+    # Field length checks
+    # The discord API has limits on the length of certain fields
+    if len(config["name"]) > 64:
+        raise ConfigError("`name` must be less than 64 characters")
+
+    if "title_text" in config:
+        if len(config["title_text"]) > 256:
+            raise ConfigError("`title_text` must be less than 256 characters")
+
+    if "description" in config:
+        if len(config["description"]) > 4096:
+            raise ConfigError("`description` must be less than 4096 characters")
+
+    if "author_name" in config:
+        if len(config["author_name"]) > 256:
+            raise ConfigError("`author_name` must be less than 256 characters")
+
+    if "footer_text" in config:
+        if len(config["footer_text"]) > 2048:
+            raise ConfigError("`footer_text` must be less than 2048 characters")
+
     if not isinstance(config["channel"], int):
         raise ConfigError("'channel' must be an integer")
 
@@ -93,6 +114,10 @@ async def parse_config(config: dict) -> bool:
         if not isinstance(config["fields"], list):
             raise ConfigError("'fields' must be a list of dictionaries")
 
+        # The discord API has a limit of 25 fields
+        if len(config["fields"]) > 25:
+            raise ConfigError("You can only have a maximum of 25 fields in an embed")
+
         for field in config["fields"]:
             if not isinstance(field, dict):
                 raise ConfigError("'fields' must be a list of dictionaries")
@@ -102,6 +127,13 @@ async def parse_config(config: dict) -> bool:
                 await check_keys(field, field_keys)
             except ConfigError as e:
                 raise ConfigError(f"'fields' section error: {e}")
+
+            # Limits for field name and value
+            if len(field["name"]) > 256:
+                raise ConfigError(f"'name' for field '{field['name']}' must be less than 256 characters")
+
+            if len(field["value"]) > 1024:
+                raise ConfigError(f"'value' for field '{field['name']}' must be less than 1024 characters")
 
             if not isinstance(field["inline"], bool):
                 raise ConfigError(f"'inline' for field '{field['name']}' must be a boolean")

@@ -4,6 +4,7 @@ import logging
 import random
 import time
 from typing import Union
+from string import Template
 
 import discord
 
@@ -206,16 +207,29 @@ async def online_players(ip: str, key: str, message: str, color, image: str, tit
     else:
         words = "No Messages Set!"
 
+    mappings = {
+        "pcur": pcur,
+        "pmax": pmax,
+        "messages": words,
+    }
+
     # The description of the embed, based on the player count and adds a random word from the list
     if check_status:
-        description = str.format(description, pcur=pcur, pmax=pmax, messages=words,
-                                 motd=motd.strip(), version=version)
+
+        if "$motd" in description:
+            mappings["motd"] = motd
+        if "$version" in description:
+            mappings["version"] = version
+
+        template = Template(description).safe_substitute(mappings)
+        description = template
+
     else:
-        description = str.format(description, pcur=pcur,pmax=pmax, messages=words)
+        description = Template(description).safe_substitute(mappings)
 
     embed = customEmbed(title=title,
                         description=description,
-                        timestamp=datetime.datetime.utcnow(),
+                        timestamp=discord.utils.utcnow(),
                         colour=color) \
         .pastures_footer() \
         .pastures_thumbnail(image)

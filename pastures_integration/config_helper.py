@@ -14,7 +14,7 @@ class EmbedConfig:
     channel_id: int = 0
     message_id: int = 0
     title: str = "Example Server Title"
-    description: str = "Example Server Description - {pcur}/{pmax} players {messages} \n If the server lookup is enabled, heres more: MOTD:`{motd}`, Version:`{version}`"
+    description: str = "**Example Server Description**\nPlayers:`$pcur/$pmax` \nRandom message:`$messages` \n**Server lookup live info** *(if enabled)*:\nServer MOTD:`$motd`\nServer Version:`$version`"
     image: str = "https://file.mednis.network/static_assets/main-logo-mini.png"
     messages: list = field(default_factory=list)
     show_ip: bool = False
