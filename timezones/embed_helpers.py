@@ -312,18 +312,29 @@ async def time_convert_to(input_text: str, user_from: discord.Member, user_to: d
 async def user_time_list(users_times: list, guild: discord.Guild, command_mention: str, ampm=False) -> TimeEmbed:
     description = "These are the current times for the users in this server:\n"
     previous_day = None
+
     for timezone in users_times:
         time = timezone["time"]
         utc_offset = await time_convert.utc_time(time)
 
         if previous_day != time.strftime('%A'):
+
+            # TODO: Maybe use the median hour of the day for the emoji instead of just the current hour?
             emoji = emoji_calculator(time.hour)
+
+            # New year
+            # <New Year Emoji>, **Day** , DD Month YYYY
+            if time.strftime('%d %B %Y') == time.strftime('01 January %Y'):
+                description += f"### 🎉 **{time.strftime('%A')}**{time.strftime(', %d %B - %Y')}\n"
+
             # Regular
-            description += f"### {emoji} **{time.strftime('%A')}**{time.strftime(', %d %B')}\n"
-            # Shenanigans for april fools
-            # description += f"### {emoji} **Wednesday**{time.strftime(', %d %B')}\n"
+            # <Emoji>, **Day** , DD Month
+            else:
+                description += f"### {emoji} **{time.strftime('%A')}**{time.strftime(', %d %B')}\n"
+
             previous_day = time.strftime('%A')
 
+        # Depending on the time format, display accordingly
         if ampm:
             time_str = time.strftime('%I:%M %p')
         else:
