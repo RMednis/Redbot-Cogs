@@ -286,8 +286,14 @@ class VxEr(commands.Cog):
 
             alternative = await self.config.guild(reaction.message.guild).reddit_replacement()
             try:
-                await change_link(reaction.message, "reddit.com", alternative)
-                return
+                if "https://old.reddit.com" in reaction.message.content:
+                    # Probably an old Reddit link, so we try to change that first
+                    await change_link(reaction.message, "old.reddit.com", alternative)
+                    return
+
+                else:
+                    await change_link(reaction.message, "reddit.com", alternative)
+                    return
             except ValueError:
                 # We want this to be silent, so we just give up
                 log.error("Tried to change a Reddit link, but no REGEX match was found.\n"
