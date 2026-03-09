@@ -50,8 +50,10 @@ class VxEr(commands.Cog):
         default_guild = {
             "tiktok": True,
             "twitter": True,
+            "reddit": True,
             "tiktok_replacement": "vxtiktok.com",
             "twitter_replacement": "vxtwitter.com",
+            "reddit_replacement": "vxreddit.com",
             "messages": []
         }
 
@@ -89,6 +91,7 @@ class VxEr(commands.Cog):
                             message = await guild.get_channel(message[1]).fetch_message(message[0])
                             await message.remove_reaction(emoji="🎵", member=self.bot.user)
                             await message.remove_reaction(emoji="🐦", member=self.bot.user)
+                            await message.remove_reaction(emoji="👽", member=self.bot.user)
                         except discord.errors.NotFound:
                             pass
 
@@ -126,6 +129,21 @@ class VxEr(commands.Cog):
         await interaction.response.send_message(f"Twitter link conversion `{'enabled' if enable else 'disabled'}`"
                                                 f" with replacement `{vxtwitter}`")
 
+    @vxer_group.command(name="reddit", description="Set the replacement for Reddit links")
+    @app_commands.describe(vxreddit="The replacement for the Reddit link")
+    @commands.guild_only()
+    async def vxer_reddit(self, interaction: discord.Interaction, enable: bool,  vxreddit: str) -> None:
+
+        await self.config.guild(interaction.guild).reddit.set(enable)
+
+        if vxreddit is not None:
+            await self.config.guild(interaction.guild).reddit_replacement.set(vxreddit)
+        else:
+            vxreddit = await self.config.guild(interaction.guild).reddit_replacement()
+
+        await interaction.response.send_message(f"Reddit link replacement `{'enabled' if enable else 'disabled'}`"
+                                                f"with replacement `{vxreddit}`")
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
 
@@ -140,6 +158,10 @@ class VxEr(commands.Cog):
         # Check if the message is already a vx-ed link
         # "vxt" works for both vxTikTok and vxTwitter
         if "vxt" in message.content:
+            return
+
+        # Reddit
+        if "vxr" in message.content:
             return
 
         # Check if TikTok link conversion is enabled
@@ -165,6 +187,16 @@ class VxEr(commands.Cog):
                 await self.add_message_to_list(message)
                 await message.add_reaction("🐦")
                 return
+
+        # Check if Reddit link conversion is enabled
+        if await self.config.guild(message.guild).reddit():
+
+            # Check if the message is a Reddit link
+            if "reddit.com/" in message.content:
+                await self.add_message_to_list(message)
+                await message.add_reaction("👽")
+                return
+
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User) -> None:
@@ -241,6 +273,27 @@ class VxEr(commands.Cog):
                     log.error("Tried to change a X/Twitter link, but no REGEX match was found.\n"
                               f"GUILD: {reaction.message.guild.id} MESSAGE: {reaction.message.id}")
                     return
+
+        # Check if the reaction is from a Reddit link
+        if reaction.emoji == "👽":
+            try:
+                # Try to remove the reaction
+                await reaction.message.remove_reaction("👽", member=self.bot.user)
+
+            except discord.errors.Forbidden:
+                # We just give up
+                return
+
+            alternative = await self.config.guild(reaction.message.guild).reddit_replacement()
+            try:
+                await change_link(reaction.message, "reddit.com", alternative)
+                return
+            except ValueError:
+                # We want this to be silent, so we just give up
+                log.error("Tried to change a Reddit link, but no REGEX match was found.\n"
+                          f"GUILD: {reaction.message.guild.id} MESSAGE: {reaction.message.id}")
+                return
+
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # We don't store any user data
