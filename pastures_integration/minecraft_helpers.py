@@ -111,8 +111,8 @@ async def whitelist_remove_success(response_string: str):
 
 
 # Async Wrapper Function
-async def run_rcon_command(ip: str, key: str, command: str):
-    client = aiomcrcon.Client(ip, 25575, key)
+async def run_rcon_command(ip: str, key: str, command: str, port: int = 25575):
+    client = aiomcrcon.Client(ip, port, key)
 
     try:
         await client.connect()
@@ -132,10 +132,10 @@ async def run_rcon_command(ip: str, key: str, command: str):
     await client.close()
     return response[0]
 
-async def lookup_server(ip: str):
-    server = JavaServer.lookup(ip)
+async def lookup_server(ip: str, port: int = 25565):
+    server = JavaServer.lookup(f"{ip}:{port}")
     try:
         status = await server.async_status()
         return status
     except:
-        raise RuntimeError("Server status failed. Not reachable or offline!")
+        raise RuntimeError("Server status lookup failed. Not reachable or offline!")

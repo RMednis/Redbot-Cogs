@@ -37,10 +37,10 @@ class PasturesIntegration(commands.Cog):
         )
 
         default_guild_config = {
-            "servers" : [],
-            "whitelisting_role": "",
-            "whitelisting_channel": "",
-            "logging_channel": ""
+            "servers": [],
+            "whitelisting_role": None,
+            "whitelisting_channel": None,
+            "logging_channel": None
         }
 
         self.config.register_guild(**default_guild_config)
@@ -72,9 +72,11 @@ class PasturesIntegration(commands.Cog):
                 # Get the server information for RCON
                 ip = server_config["ip"]
                 key = server_config["key"]
+                rcon_port = server_config["rcon_port"]
+                server_port = server_config["server_port"]
 
                 # Get the embed information
-                embed = await embed_helpers.online_player_status(server_config, ip, key,
+                embed = await embed_helpers.online_player_status(server_config, ip, key, rcon_port, server_port,
                                                                  "_This message updates every minute!  ⌚_")
 
                 # Get the stored channel and message id
@@ -104,9 +106,8 @@ class PasturesIntegration(commands.Cog):
                 log.info("Saving changes to server config!")
                 await guild_config.servers.set(servers)
 
-    servers = app_commands.Group(name="server",description="Server management commands",
-                                         guild_only=True)
-
+    servers = app_commands.Group(name="server", description="Server management commands",
+                                 guild_only=True)
 
     async def server_autocomplete(self, interaction: discord.Interaction, current: str):
         servers = await self.config.guild(interaction.guild).servers()
@@ -115,13 +116,17 @@ class PasturesIntegration(commands.Cog):
             for server in servers
             if current.lower() in server["name"].lower()
         ]
+
     @app_commands.guild_only()
     @app_commands.describe(server="The name of the server you want to add.",
                            ip="The IP of the server you want to add.",
                            key="The RCON key for the server you want to add.",
+                           rcon_port="The RCON port for the server you want to add (Default: 25575).",
+                           server_port="The server port for the server you want to add (Default: 25565).",
                            config="A JSON file with the server configuration.")
     @servers.command(name="add", description="Add a server to the bot!")
-    async def server_add(self, interaction: discord.Interaction, server: str, ip: str, key: str, config: discord.Attachment = None):
+    async def server_add(self, interaction: discord.Interaction[Red], server: str, ip: str, key: str, rcon_port: int = 25575,
+                         server_port: int = 25565, config: discord.Attachment = None):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
 
@@ -140,6 +145,8 @@ class PasturesIntegration(commands.Cog):
                         "name": server,
                         "ip": ip,
                         "key": key,
+                        "rcon_port": rcon_port,
+                        "server_port": server_port,
                         "config": settings
                     }
 
@@ -152,10 +159,12 @@ class PasturesIntegration(commands.Cog):
                 return
 
         else:
-            json_string ={
+            json_string = {
                 "name": server,
                 "ip": ip,
                 "key": key,
+                "rcon_port": rcon_port,
+                "server_port": server_port,
                 "config": config_helper.ServerConfig.default_config().to_dict()
             }
 
@@ -166,7 +175,7 @@ class PasturesIntegration(commands.Cog):
             await guild_config.servers.set(servers)
             await interaction.response.send_message(f"Server `{server}` added!")
 
-        else :
+        else:
             # Check if the server already exists
             for s in servers:
                 # We check both the exact name and a case-insensitive name, just in case
@@ -178,7 +187,8 @@ class PasturesIntegration(commands.Cog):
             servers.append(json_string)
             await guild_config.servers.set(servers)
             await interaction.response.send_message(f"Added a new server - `{server}`!\n"
-                                                    f"You should now Configure the server with `\server edit {server}`!")
+                                                    f"You should now Configure the server with `\\server edit {server}`!")
+
     @app_commands.guild_only()
     @servers.command(name="list", description="List all servers added to the bot!")
     async def server_list(self, interaction: discord.Interaction):
@@ -189,18 +199,17 @@ class PasturesIntegration(commands.Cog):
 
         log.info(f"Servers: {servers}")
 
-        if len(servers) == 0:
+        if not servers:
             await interaction.response.send_message("There are no servers added!\n"
-                                                    "Use `\server add` to add a server!")
+                                                    "Use `\\server add` to add a server!")
             return
 
         server_list = ""
         for s in servers:
-            server_list += f"`{s['name']}` - `{s['ip']}`\n"
+            server_list += f"`{s['name']}` - `{s['ip']}:{s['server_port']}`\n"
 
         await interaction.response.send_message(f"**Currently added servers:** \n{server_list}"
-                                                f"\n-# You can always edit a server with: `\server edit <server_name>`")
-
+                                                f"\n-# You can always edit a server with: `\\server edit <server_name>`")
 
     async def get_server_config(self, config: dict, server_name: str) -> discord.File:
         # Convert the config to a file-like object
@@ -215,9 +224,12 @@ class PasturesIntegration(commands.Cog):
     @app_commands.describe(server_name="The name of the server you want to edit.",
                            ip="The changed IP (Optional)",
                            key="The changed RCON key (Optional)",
+                           rcon_port="The changed RCON port (Optional)",
+                           server_port="The changed server port (Optional)",
                            config="The changed server configuration (Optional)")
     @servers.command(name="edit", description="Edit a saved servers configuration!")
-    async def server_edit(self, interaction: discord.Interaction, server_name: str, ip: str = None, key: str = None, config: discord.Attachment = None):
+    async def server_edit(self, interaction: discord.Interaction, server_name: str, ip: str = None, key: str = None,
+                          rcon_port: int = None, server_port: int = None, config: discord.Attachment = None):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
         updated_variables = ""
@@ -233,6 +245,14 @@ class PasturesIntegration(commands.Cog):
                     # The user provided a new key, update it
                     s["key"] = key
                     updated_variables += f"RCON key,"
+                if rcon_port is not None:
+                    # The user provided a new RCON port, update it
+                    s["rcon_port"] = rcon_port
+                    updated_variables += f"RCON port,"
+                if server_port is not None:
+                    # The user provided a new server port, update it
+                    s["server_port"] = server_port
+                    updated_variables += f"server port,"
                 if config is not None:
                     # The user provided a new config file, update it
                     try:
@@ -268,9 +288,10 @@ class PasturesIntegration(commands.Cog):
 
                     # No config file provided, just return the current config
                     file = await self.get_server_config(s["config"], server_name)
-                    await interaction.response.send_message(f"**Here is the current configuration for `{server_name}`.**\n"
-                                                            f"You can edit this file and re-upload it via `\server edit {server_name}` to change it!",
-                                                            file=file)
+                    await interaction.response.send_message(
+                        f"**Here is the current configuration for `{server_name}`.**\n"
+                        f"You can edit this file and re-upload it via `\\server edit {server_name}` to change it!",
+                        file=file)
                     return
 
         # No server found
@@ -298,7 +319,8 @@ class PasturesIntegration(commands.Cog):
                 if s["name"] == server:
                     config = await self.get_server_config(s["config"], server)
                     await interaction.response.send_message(f"**Here is the configuration for `{server}`.**\n"
-                                                            f"You can edit this file and re-upload it via `\server edit {server}` to change it!",
+                                                            f"The server's port is `{s['server_port']}` and RCON port is `{s['rcon_port']}`.\n"
+                                                            f"You can edit this file and re-upload it via `\\server edit {server}` to change it!",
                                                             file=config)
 
                     return
@@ -336,7 +358,7 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
 
         if role is None:
-            role_id =  await guild_config.whitelisting_role()
+            role_id = await guild_config.whitelisting_role()
             if role_id is None:
                 await interaction.response.send_message("No role set for one-click whitelisting!")
                 return
@@ -357,14 +379,15 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
 
         if channel is None:
-            channel_id = guild_config.whitelisting_channel()
+            channel_id = await guild_config.whitelisting_channel()
             if channel_id is None:
                 await interaction.response.send_message("No channel set for one-click whitelisting!")
                 return
             else:
                 channel = interaction.guild.get_channel(channel_id)
-                await interaction.response.send_message(f"Channel for one-click whitelisting is set to: {channel.mention}!",
-                                                        allowed_mentions=discord.AllowedMentions.none())
+                await interaction.response.send_message(
+                    f"Channel for one-click whitelisting is set to: {channel.mention}!",
+                    allowed_mentions=discord.AllowedMentions.none())
                 return
 
         await guild_config.whitelisting_channel.set(channel.id)
@@ -378,7 +401,7 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
 
         if channel is None:
-            channel_id = guild_config.logging_channel()
+            channel_id = await guild_config.logging_channel()
             if channel_id is None:
                 await interaction.response.send_message("No logging channel set!")
                 return
@@ -405,8 +428,10 @@ class PasturesIntegration(commands.Cog):
             if s["name"] == server:
                 ip = s["ip"]
                 key = s["key"]
+                rcon_port = s["rcon_port"]
+                server_port = s["server_port"]
 
-                embed = await embed_helpers.online_player_status(s, ip, key, "_Please wait..._")
+                embed = await embed_helpers.online_player_status(s, ip, key, rcon_port, server_port, "_Please wait..._")
 
                 try:
                     message = await channel.send(embed=embed)
@@ -425,7 +450,6 @@ class PasturesIntegration(commands.Cog):
 
         await interaction.response.send_message(f"Server `{server}` not found!")
         return
-
 
     @app_commands.guild_only()
     @app_commands.describe(server="The server to remove")
@@ -465,11 +489,11 @@ class PasturesIntegration(commands.Cog):
             if s["name"] == server_name:
                 ip = s["ip"]
                 key = s["key"]
+                rcon_port = s["rcon_port"]
 
                 # Defer the response - The ping can take a while!
 
-
-                ping_embed = await embed_helpers.ping_embed(server_name, ip, key)
+                ping_embed = await embed_helpers.ping_embed(server_name, ip, key, rcon_port)
 
                 # We got the response, send it!
                 await interaction.followup.send(embed=ping_embed)
@@ -491,22 +515,21 @@ class PasturesIntegration(commands.Cog):
 
         for s in servers:
             if s["name"] == server:
-                embed = await embed_helpers.online_player_status(s, s["ip"], s["key"],
+                embed = await embed_helpers.online_player_status(s, s["ip"], s["key"], s["rcon_port"], s["server_port"],
                                                                  "_This message will not update._")
                 await interaction.followup.send(embed=embed)
                 return
 
         await interaction.followup.send(f"Server `{server}` not found!")
 
-
     whitelist = app_commands.Group(name="whitelist",
-                                         description="Add or remove players from the server whitelists",
-                                         guild_only=True)
+                                   description="Add or remove players from the server whitelists",
+                                   guild_only=True)
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)
     @app_commands.describe(server="The server to add the player to",
-                            player="The name of the player you wish to add to the whitelist")
+                           player="The name of the player you wish to add to the whitelist")
     @whitelist.command(name="add", description="Add a player to the whitelist")
     async def whitelist_add(self, interaction: discord.Interaction, server: str, player: str):
 
@@ -519,7 +542,8 @@ class PasturesIntegration(commands.Cog):
             if s["name"] == server:
                 ip = s["ip"]
                 key = s["key"]
-                embed = await embed_helpers.whitelist_add(ip, key, player, server)
+                rcon_port = s["rcon_port"]
+                embed = await embed_helpers.whitelist_add(ip, key, rcon_port, player, server)
                 await interaction.followup.send(embed=embed)
                 return
         else:
@@ -528,7 +552,7 @@ class PasturesIntegration(commands.Cog):
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)
     @app_commands.describe(server="The server to remove the player from",
-                            player="The name of the player you wish to remove from the whitelist")
+                           player="The name of the player you wish to remove from the whitelist")
     @whitelist.command(name="remove", description="Remove a player from the whitelist")
     async def whitelist_remove(self, interaction: discord.Interaction, server: str, player: str):
 
@@ -541,8 +565,9 @@ class PasturesIntegration(commands.Cog):
             if s["name"] == server:
                 ip = s["ip"]
                 key = s["key"]
+                rcon_port = s["rcon_port"]
 
-                embed = await embed_helpers.whitelist_remove(ip, key, player, server)
+                embed = await embed_helpers.whitelist_remove(ip, key, rcon_port, player, server)
                 await interaction.followup.send(embed=embed)
                 return
 
@@ -562,14 +587,14 @@ class PasturesIntegration(commands.Cog):
             if s["name"] == server:
                 ip = s["ip"]
                 key = s["key"]
+                rcon_port = s["rcon_port"]
                 color = s["config"]["embed"]["color"]
-                embed = await embed_helpers.whitelist_list(server, ip, key, color)
+                embed = await embed_helpers.whitelist_list(server, ip, key, rcon_port, color)
                 await interaction.response.send_message(embed=embed)
                 return
 
         else:
             await interaction.response.send_message(f"Server `{server}` not found!")
-
 
     # Single click whitelistling reaction listener
 
@@ -597,12 +622,13 @@ class PasturesIntegration(commands.Cog):
 
         # Check if the reaction is a whitelisting reaction for one of the servers
         for s in servers:
-            if s["config"]["one_click_whitelist"]:
+            if s["config"].get("one_click_whitelist"):
                 # The server has one-click whitelisting enabled
                 if str(payload.emoji) == s["config"]["one_click_emoji"]:
                     # Emoji matches the one-click emoji, lets do this!
                     ip = s["ip"]
                     key = s["key"]
+                    rcon_port = s["rcon_port"]
 
                     channel = guild.get_channel(payload.channel_id)
                     message = await channel.fetch_message(payload.message_id)
@@ -611,7 +637,8 @@ class PasturesIntegration(commands.Cog):
 
                     try:
                         log_channel = guild.get_channel(await guild_config.logging_channel())
-                        embed = await embed_helpers.whitelist_add(ip, key, player, s["name"], guild.get_member(payload.user_id))
+                        embed = await embed_helpers.whitelist_add(ip, key, rcon_port, player, s["name"],
+                                                                  guild.get_member(payload.user_id))
                         await log_channel.send(embed=embed)
                     except discord.HTTPException as HttpErr:
                         log.error("Error sending message: ", HttpErr)

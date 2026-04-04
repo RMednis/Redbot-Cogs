@@ -47,7 +47,7 @@ async def error_embed(title: str, error: Union[Exception, str], colour=0xe74c3c)
                        timestamp=datetime.datetime.utcnow(), colour=colour).pastures_footer()
 
 
-async def ping_embed(name: str, ip: str, key: str):
+async def ping_embed(name: str, ip: str, key: str, rcon_port: int):
     error = ""
     data = ""
 
@@ -60,7 +60,7 @@ async def ping_embed(name: str, ip: str, key: str):
 
     try:
         start_time = time.time()
-        data = await minecraft_helpers.run_rcon_command(ip, key, "list")
+        data = await minecraft_helpers.run_rcon_command(ip, key, "list", rcon_port)
         end_time = time.time()
     except RuntimeError as err:
         error = err
@@ -83,9 +83,9 @@ async def ping_embed(name: str, ip: str, key: str):
 
 
 # The actual embeds we post in situations!
-async def whitelist_list(server: str, ip: str, key: str, color):
+async def whitelist_list(server: str, ip: str, key: str, rcon_port:int, color):
     try:
-        response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist list")
+        response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist list", rcon_port)
         players = await minecraft_helpers.whitelisted_players(response)
 
     except RuntimeError as err:
@@ -108,11 +108,11 @@ async def whitelist_list(server: str, ip: str, key: str, color):
     return embed
 
 
-async def whitelist_remove(ip: str, key: str, username: str, server: str, user: discord.Member = None):
+async def whitelist_remove(ip: str, key: str, rcon_port: int, username: str, server: str, user: discord.Member = None):
     try:
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
-        response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist remove {name}")
+        response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist remove {name}", rcon_port)
         await minecraft_helpers.whitelist_remove_success(response)
 
         embed = customEmbed(title=f"`{server}` - Player removed from whitelist!",
@@ -135,11 +135,11 @@ async def whitelist_remove(ip: str, key: str, username: str, server: str, user: 
         return await error_embed(f"{server} - Whitelist Error!", err)
 
 
-async def whitelist_add(ip: str, key: str, username: str, server: str, user: discord.Member= None):
+async def whitelist_add(ip: str, key: str, rcon_port:int,  username: str, server: str, user: discord.Member= None):
     try:
         username = username.lower()
         name = await minecraft_helpers.check_name(username)
-        response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist add {name}")
+        response = await minecraft_helpers.run_rcon_command(ip, key, f"whitelist add {name}", rcon_port)
 
         await minecraft_helpers.whitelist_success(response)
 
@@ -165,7 +165,7 @@ async def whitelist_add(ip: str, key: str, username: str, server: str, user: dis
             errorembed.embed_caller(user)
         return errorembed
 
-async def online_player_status(config: dict, ip: str, key: str, message: str):
+async def online_player_status(config: dict, ip: str, key: str, rcon_port:int, server_port:int,  message: str):
     embed = config["config"]["embed"]
     color = embed["color"]
     image = embed["image"]
@@ -177,15 +177,15 @@ async def online_player_status(config: dict, ip: str, key: str, message: str):
     check_status = embed["request_status"]
 
     # Get the stored channel and message id
-    return await online_players(ip, key, message, color, image, title, description, words, show_ip, public_ip, check_status)
+    return await online_players(ip, key, rcon_port, server_port, message, color, image, title, description, words, show_ip, public_ip, check_status)
 
 
-async def online_players(ip: str, key: str, message: str, color, image: str, title: str, description: str, words: list[str],
+async def online_players(ip: str, key: str, rcon_port: int, server_port: int, message: str, color, image: str, title: str, description: str, words: list[str],
                          show_ip: bool, public_ip: str, check_status: bool = False):
     try:
-        data = await minecraft_helpers.run_rcon_command(ip, key, "list")
+        data = await minecraft_helpers.run_rcon_command(ip, key, "list", rcon_port)
         if check_status:
-            server = await minecraft_helpers.lookup_server(ip)
+            server = await minecraft_helpers.lookup_server(ip, server_port)
             motd = server.motd.to_plain()
             version = server.version.name
 
