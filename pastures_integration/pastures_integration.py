@@ -48,12 +48,9 @@ class PasturesIntegration(commands.Cog):
 
         log.info("Pastures Integration Loaded!")
 
-    def __unload(self):
+    def cog_unload(self):
         # Stop the loop after unload!
         self.update_loop.stop()
-
-    def cog_unload(self):
-        self.__unload()
 
     @tasks.loop(minutes=1)
     async def update_loop(self):
