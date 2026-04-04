@@ -2,10 +2,10 @@ from datetime import datetime
 
 import discord
 
-
 class ConfigError(Exception):
     pass
-async def find_embed(configs: list, name: str) -> dict:
+
+def find_embed(configs: list, name: str) -> dict:
     for config in configs:
         if config["name"] == name:
             return config
@@ -37,6 +37,7 @@ def has_reaction_roles(config: dict) -> bool:
     if "reaction_roles" in config:
         if config["reaction_roles"] is not None:
             return True
+    return False
 
 
 def get_reaction_roles(config: dict, emoji: str) -> list:
