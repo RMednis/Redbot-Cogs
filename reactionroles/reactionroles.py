@@ -219,10 +219,6 @@ class ReactionRoles(commands.Cog):
         except discord.HTTPException as e:
             return await interaction.followup.send(f"Error removing embed: `{str(e)}`", ephemeral=False)
 
-
-        await self.config.guild(interaction.guild).embeds.set(embed_configs)
-        return await interaction.followup.send(f"Embed `{name}` has been removed", ephemeral=False)
-
     @app_commands.autocomplete(name=embed_autocomplete)
     @embed.command(name="add_reaction", description="Add a reaction role to an existing embed")
     async def embed_add_reaction(self, interaction: discord.Interaction, name: str, emoji: str, role: discord.Role,
