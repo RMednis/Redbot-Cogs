@@ -172,8 +172,8 @@ class PasturesIntegration(commands.Cog):
         else:
             # Check if the server already exists
             for s in servers:
-                # We check both the exact name and a case-insensitive name, just in case
-                if s["name"] == server or s["name"].lower() == server.lower():
+                # We ignore case when comparing server names.
+                if s["name"].lower() == server.lower():
                     # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(f"A server named `{server}` already exists!")
                     return
