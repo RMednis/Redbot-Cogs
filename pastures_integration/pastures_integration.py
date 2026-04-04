@@ -143,10 +143,12 @@ class PasturesIntegration(commands.Cog):
                     }
 
                 except config_helper.ConfigError as err:
+                    # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(f"Error parsing config file: {err}")
                     return
 
             else:
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message("The attached file is not a `.json` file!")
                 return
 
@@ -165,6 +167,7 @@ class PasturesIntegration(commands.Cog):
             # We create the list and add the server
             servers = [json_string]
             await guild_config.servers.set(servers)
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message(f"Server `{server}` added!")
 
         else:
@@ -172,12 +175,14 @@ class PasturesIntegration(commands.Cog):
             for s in servers:
                 # We check both the exact name and a case-insensitive name, just in case
                 if s["name"] == server or s["name"].lower() == server.lower():
+                    # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(f"A server named `{server}` already exists!")
                     return
 
             # It doesn't exist, add it!
             servers.append(json_string)
             await guild_config.servers.set(servers)
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message(f"Added a new server - `{server}`!\n"
                                                     f"You should now Configure the server with `\\server edit {server}`!")
 
@@ -192,6 +197,7 @@ class PasturesIntegration(commands.Cog):
         log.info(f"Servers: {servers}")
 
         if not servers:
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message("There are no servers added!\n"
                                                     "Use `\\server add` to add a server!")
             return
@@ -200,6 +206,7 @@ class PasturesIntegration(commands.Cog):
         for s in servers:
             server_list += f"`{s['name']}` - `{s['ip']}:{s['server_port']}`\n"
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"**Currently added servers:** \n{server_list}"
                                                 f"\n-# You can always edit a server with: `\\server edit <server_name>`")
 
@@ -262,11 +269,13 @@ class PasturesIntegration(commands.Cog):
 
                         if updated_variables:
                             # We have updated some variables, save the server config
+                            # noinspection PyUnresolvedReferences
                             await interaction.response.send_message(
                                 f"`{server_name}`'s `{updated_variables[:-1]}` was updated successfully!\n")
                         return
 
                     except config_helper.ConfigError as err:
+                        # noinspection PyUnresolvedReferences
                         await interaction.response.send_message(f"Error parsing config file: `{err}`")
                         return
 
@@ -274,12 +283,14 @@ class PasturesIntegration(commands.Cog):
                     if updated_variables:
                         # We have updated some variables, save the server config
                         await guild_config.servers.set(servers)
+                        # noinspection PyUnresolvedReferences
                         await interaction.response.send_message(
                             f"`{server_name}`'s `{updated_variables[:-1]}` was updated successfully!\n")
                         return
 
                     # No config file provided, just return the current config
                     file = await self.get_server_config(s["config"], server_name)
+                    # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(
                         f"**Here is the current configuration for `{server_name}`.**\n"
                         f"You can edit this file and re-upload it via `\\server edit {server_name}` to change it!",
@@ -287,6 +298,7 @@ class PasturesIntegration(commands.Cog):
                     return
 
         # No server found
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"No server named `{server_name}` found!")
         return
 
@@ -301,6 +313,7 @@ class PasturesIntegration(commands.Cog):
 
         if server is None:
             file = io.BytesIO(config_helper.ServerConfig.default_config().to_json().encode('UTF-8'))
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message("This is the default server configuration!\n"
                                                     "Edit this file and re-upload it to add a new server!",
                                                     file=discord.File(file, filename="server_default.json"))
@@ -310,13 +323,14 @@ class PasturesIntegration(commands.Cog):
             for s in servers:
                 if s["name"] == server:
                     config = await self.get_server_config(s["config"], server)
+                    # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(f"**Here is the configuration for `{server}`.**\n"
                                                             f"The server's port is `{s['server_port']}` and RCON port is `{s['rcon_port']}`.\n"
                                                             f"You can edit this file and re-upload it via `\\server edit {server}` to change it!",
                                                             file=config)
 
                     return
-
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message(f"No server named `{server}` found!")
 
     @app_commands.guild_only()
@@ -329,6 +343,7 @@ class PasturesIntegration(commands.Cog):
         servers = await guild_config.servers()
 
         if PartialEmoji.from_str(emote) is None:
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message("Invalid emote!")
             return
 
@@ -337,9 +352,11 @@ class PasturesIntegration(commands.Cog):
                 s["config"]["one_click_emoji"] = emote
 
                 await guild_config.servers.set(servers)
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message(f"Emote for `{server}` set to {emote} `({emote})`!")
                 return
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"Server `{server}` not found!")
         return
 
@@ -352,14 +369,17 @@ class PasturesIntegration(commands.Cog):
         if role is None:
             role_id = await guild_config.whitelisting_role()
             if role_id is None:
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message("No role set for one-click whitelisting!")
                 return
             else:
                 role = interaction.guild.get_role(role_id)
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message(f"Role for one-click whitelisting is set to: {role.mention}!",
                                                         allowed_mentions=discord.AllowedMentions.none())
                 return
         await guild_config.whitelisting_role.set(role.id)
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"One click whitelisting is available to everyone "
                                                 f"with the {role.mention} role!",
                                                 allowed_mentions=discord.AllowedMentions.none())
@@ -373,16 +393,19 @@ class PasturesIntegration(commands.Cog):
         if channel is None:
             channel_id = await guild_config.whitelisting_channel()
             if channel_id is None:
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message("No channel set for one-click whitelisting!")
                 return
             else:
                 channel = interaction.guild.get_channel(channel_id)
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message(
                     f"Channel for one-click whitelisting is set to: {channel.mention}!",
                     allowed_mentions=discord.AllowedMentions.none())
                 return
 
         await guild_config.whitelisting_channel.set(channel.id)
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"One click whitelisting is available in {channel.mention}!",
                                                 allowed_mentions=discord.AllowedMentions.none())
 
@@ -395,15 +418,18 @@ class PasturesIntegration(commands.Cog):
         if channel is None:
             channel_id = await guild_config.logging_channel()
             if channel_id is None:
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message("No logging channel set!")
                 return
             else:
                 channel = interaction.guild.get_channel(channel_id)
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message(f"Logging channel is set to: {channel.mention}!",
                                                         allowed_mentions=discord.AllowedMentions.none())
                 return
 
         await guild_config.logging_channel.set(channel.id)
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"Logging is set to {channel.mention}!",
                                                 allowed_mentions=discord.AllowedMentions.none())
 
@@ -431,15 +457,18 @@ class PasturesIntegration(commands.Cog):
                     s["config"]["embed"]["message_id"] = message.id
                     await guild_config.servers.set(servers)
 
+                    # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(f"Embed sent in {channel.mention}!\n"
                                                             f"It should update every minute!")
                     return
 
                 except discord.HTTPException as HttpErr:
                     log.error("Error sending message: ", HttpErr)
+                    # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(f"Error sending message in {channel.mention}!")
                     return
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"Server `{server}` not found!")
         return
 
@@ -459,9 +488,11 @@ class PasturesIntegration(commands.Cog):
             if s["name"] == server:
                 servers.remove(s)
                 await guild_config.servers.set(servers)
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message("Server removed!")
                 return
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"Server `{server}` not found!")
         return
 
@@ -582,10 +613,12 @@ class PasturesIntegration(commands.Cog):
                 rcon_port = s["rcon_port"]
                 color = s["config"]["embed"]["color"]
                 embed = await embed_helpers.whitelist_list(server, ip, key, rcon_port, color)
+                # noinspection PyUnresolvedReferences
                 await interaction.response.send_message(embed=embed)
                 return
 
         else:
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message(f"Server `{server}` not found!")
 
     # Single click whitelistling reaction listener
