@@ -116,7 +116,7 @@ class ReactionRoles(commands.Cog):
 
                 message = await channel.send(embed=await config_parser.create_embed(settings))
                 settings["message"] = message.id
-                await self.config.guild(interaction.guild).embeds.set(embed_configs)
+
                 # Add the config to the list
                 embed_configs.append(settings)
                 await self.config.guild(interaction.guild).embeds.set(embed_configs)
@@ -381,6 +381,9 @@ class ReactionRoles(commands.Cog):
 
         embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
         config = await config_parser.find_embed_by_id(embed_configs, payload.message_id)
+        if config is None:
+            return
+
 
         for reaction_role in config["reaction_roles"]:
             if reaction_role["emoji"] == str(payload.emoji):
@@ -438,6 +441,8 @@ class ReactionRoles(commands.Cog):
 
         embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
         config = await config_parser.find_embed_by_id(embed_configs, payload.message_id)
+        if config is None:
+            return
 
         for role in config["reaction_roles"]:
             if role["emoji"] == str(payload.emoji):
