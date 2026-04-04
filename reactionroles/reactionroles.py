@@ -168,9 +168,26 @@ class ReactionRoles(commands.Cog):
             return await interaction.followup.send(f"Error loading config: `{str(e)}`", ephemeral=False)
 
         # Find the embed, edit it
-        channel = interaction.guild.get_channel(settings["channel"])
-        message = await channel.fetch_message(settings["message"])
-        await message.edit(embed = config_parser.create_embed(settings))
+        try:
+            channel = interaction.guild.get_channel(settings["channel"])
+
+            if channel is None:
+                return await interaction.followup.send("The channel in the config no longer exists.", ephemeral=False)
+
+            try:
+                message = await channel.fetch_message(settings["message"])
+            except discord.NotFound:
+                    return await interaction.followup.send("The embed message could not be found/no longer exists. ", ephemeral=False)
+            except discord.Forbidden:
+                    return await interaction.followup.send("I do not have permission to edit the embed message. ", ephemeral=False)
+
+
+            await message.edit(embed = config_parser.create_embed(settings))
+        except discord.NotFound:
+            return await interaction.followup.send("The embed message could not be found/no longer exists. ", ephemeral=False)
+        except discord.Forbidden:
+            return await interaction.followup.send("I do not have permission to edit the embed message. ", ephemeral=False)
+
 
         # Update the config
         for i, embed in enumerate(embed_configs):
@@ -194,6 +211,8 @@ class ReactionRoles(commands.Cog):
                                                            f"\nYou should create it using `/embed create {name}`",
                                                            ephemeral=True)
 
+        delete_error = ""
+
         try:
             # Find the embed
             embed_config = config_parser.find_embed(embed_configs, name)
@@ -202,15 +221,28 @@ class ReactionRoles(commands.Cog):
             if delete_messages:
                 channel = interaction.guild.get_channel(embed_config["channel"])
                 if channel is not None:
-                    message = await channel.fetch_message(embed_config["message"])
-                    if message is not None:
+                    try:
+                        message = await channel.fetch_message(embed_config["message"])
                         await message.delete()
+                    except discord.NotFound:
+                        # Message was already deleted, nothing to remove on Discord side
+                        delete_error = "The embed message was already deleted or could not be found."
+                    except discord.Forbidden:
+                        delete_error = "I do not have permission to delete the embed message."
+                    except discord.HTTPException:
+                        delete_error = "General API Error - Unable to delete the embed message."
 
             # Remove the embed from the list
             embed_configs.remove(embed_config)
 
             # Save the config
             await self.config.guild(interaction.guild).embeds.set(embed_configs)
+
+            # If we have a delete error, display it.
+            if delete_error:
+                return await interaction.followup.send(f"Embed `{name}` has been removed, but there was an error deleting the message: {delete_error}", ephemeral=False)
+
+            # If there were no errors, just confirm the removal.
             return await interaction.followup.send(f"Embed `{name}` has been removed", ephemeral=False)
 
         except config_parser.ConfigError as e:
@@ -268,29 +300,37 @@ class ReactionRoles(commands.Cog):
         # Add the reaction to the message
         try:
             channel = interaction.guild.get_channel(embed_config["channel"])
-            if channel is not None:
+
+            if channel is None:
+                return await interaction.followup.send("The channel in the config no longer exists.", ephemeral=False)
+
+            try:
                 message = await channel.fetch_message(embed_config["message"])
-                if message is not None:
-                    reaction_roles = embed_config["reaction_roles"]
+            except discord.NotFound:
+                    return await interaction.followup.send("The embed message could not be found/no longer exists. ", ephemeral=False)
+            except discord.Forbidden:
+                    return await interaction.followup.send("I do not have permission to manage reactions on the embed message. ", ephemeral=False)
 
-                    # Add the reaction, if it fails, it's likely an invalid emoji
-                    await message.add_reaction(emoji)
+            reaction_roles = embed_config["reaction_roles"]
 
-                    # Reaction role data
-                    role_data = config_parser.create_reaction_role(str(partial_emoji), role.id, unique)
+            # Add the reaction, if it fails, it's likely an invalid emoji
+            await message.add_reaction(emoji)
 
-                    # Add the reaction role
-                    reaction_roles.append(role_data)
+            # Reaction role data
+            role_data = config_parser.create_reaction_role(str(partial_emoji), role.id, unique)
 
-                    # Update the config
-                    for i, embed in enumerate(embed_configs):
-                        if embed["name"] == name:
-                            embed_configs[i]["reaction_roles"] = reaction_roles
-                            break
-                    await self.config.guild(interaction.guild).embeds.set(embed_configs)
+            # Add the reaction role
+            reaction_roles.append(role_data)
 
-                    return await interaction.followup.send(f"Reaction role added for `{emoji}` to {role.mention}",
-                                                           ephemeral=False)
+            # Update the config
+            for i, embed in enumerate(embed_configs):
+                if embed["name"] == name:
+                    embed_configs[i]["reaction_roles"] = reaction_roles
+                    break
+            await self.config.guild(interaction.guild).embeds.set(embed_configs)
+
+            return await interaction.followup.send(f"Reaction role added for `{emoji}` to {role.mention}",
+                                                   ephemeral=False)
         except discord.HTTPException as e:
             if e.code == 10014:
                 return await interaction.followup.send(f"Invalid emoji `{emoji}` - I can only add Emoji from this server.", ephemeral=False)
@@ -324,19 +364,31 @@ class ReactionRoles(commands.Cog):
         reaction_roles = [role for role in reaction_roles if role["emoji"] != emoji]
 
         # Remove the reaction from the message
+        reaction_remove_error = ""
+
         channel = interaction.guild.get_channel(embed_config["channel"])
         if channel is not None:
-            message = await channel.fetch_message(embed_config["message"])
-            if message is not None:
+            try:
+                message = await channel.fetch_message(embed_config["message"])
                 await message.clear_reaction(emoji)
+            except discord.NotFound:
+                reaction_remove_error = "The embed message was already deleted or could not be found, so the reaction could not be removed."
+            except discord.Forbidden:
+                reaction_remove_error = "I do not have permission to manage reactions on the embed message, so the reaction could not be removed."
+            except discord.HTTPException as e:
+                reaction_remove_error = f"General API Error - Unable to remove the reaction from the embed message. Error: `{str(e)}`"
 
         # Update the config
         for i, embed in enumerate(embed_configs):
             if embed["name"] == name:
                 embed_configs[i]["reaction_roles"] = reaction_roles
                 break
+
         await self.config.guild(interaction.guild).embeds.set(embed_configs)
 
+        if reaction_remove_error:
+            return await interaction.followup.send(f"Reaction role removed for `{emoji}`, but there was an error removing the reaction from the message: "
+                                                   f"`{reaction_remove_error}`", ephemeral=False)
         return await interaction.followup.send(f"Reaction role removed for `{emoji}`", ephemeral=False)
 
 
@@ -378,19 +430,34 @@ class ReactionRoles(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+
+        # Ignore reactions from the bot itself
         if payload.user_id == self.bot.user.id:
             return
 
         embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
         config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
+
+        # Check if the message is one of our embeds, if not, do nothing
         if config is None:
             return
 
+        # Check if the embed has reaction roles, if not, do nothing
+        if not config_parser.has_reaction_roles(config):
+            return
 
         for reaction_role in config["reaction_roles"]:
             if reaction_role["emoji"] == str(payload.emoji):
                 guild = self.bot.get_guild(payload.guild_id)
                 member = guild.get_member(payload.user_id)
+
+                # We normally use the cached member object, but if the cache doesn't have the member for some reason
+                # we can fetch it from the API as a fallback
+                if member is None:
+                    try:
+                        member = await guild.fetch_member(payload.user_id)
+                    except discord.NotFound:
+                        return # The user left the guild, do nothing
 
                 if len(reaction_role["denylist"]) > 0:
                     for role in reaction_role["denylist"]:
@@ -403,6 +470,10 @@ class ReactionRoles(commands.Cog):
                     allowed = False
                     for role in reaction_role["allowlist"]:
                         allowlist_role = guild.get_role(role)
+
+                        if allowlist_role is None:
+                            continue # The role was likely deleted, skip it
+
                         if allowlist_role in member.roles:
                             # Allow the user to get the role
                             allowed = True
@@ -412,20 +483,40 @@ class ReactionRoles(commands.Cog):
 
                 added_role = guild.get_role(reaction_role["role"])
 
+                if added_role is None:
+                    return # The role was likely deleted, skip it
+
                 # Remove all other roles if unique is set on the added role
                 if reaction_role["unique"]:
                     # Remove the reaction
                     channel = guild.get_channel(config["channel"])
-                    message = await channel.fetch_message(config["message"])
+
+                    if channel is None:
+                        return # Channel was deleted, do nothing
+
+                    try:
+                        message = await channel.fetch_message(config["message"])
+                    except discord.NotFound:
+                        return # Message was deleted, do nothing
+                    except discord.Forbidden:
+                        return # We don't have permission to fetch the message, do nothing
 
                     roles_to_remove = [] # Cache the roles to remove so we can remove them all at once
                     for role in config["reaction_roles"]:
                         if role["emoji"] != str(payload.emoji):
                             # Remove the reaction
-                            await message.remove_reaction(role["emoji"], member)
+                            try:
+                                await message.remove_reaction(role["emoji"], member)
+                            except discord.NotFound:
+                                pass # The reaction was already removed, do nothing
+                            except discord.Forbidden:
+                                pass # We don't have permission to manage reactions, do nothing
 
                             # Remove the role
                             removed_role = guild.get_role(role["role"])
+                            if removed_role is None:
+                                continue # The role was likely deleted, skip it
+
                             roles_to_remove.append(removed_role)
 
                     # Remove the roles, send the reason to the modlog
@@ -438,12 +529,20 @@ class ReactionRoles(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+
+        # Ignore the bots own reactions
         if payload.user_id == self.bot.user.id:
             return
 
         embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
         config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
+
+        # Check if the message is one of our embeds, if not, do nothing
         if config is None:
+            return
+
+        # Check if the embed has reaction roles, if not, do nothing
+        if not config_parser.has_reaction_roles(config):
             return
 
         for role in config["reaction_roles"]:
@@ -451,9 +550,22 @@ class ReactionRoles(commands.Cog):
                 guild = self.bot.get_guild(payload.guild_id)
                 member = guild.get_member(payload.user_id)
 
+                # We normally use the cached member object, but if the cache doesn't have the member for some reason
+                # we can fetch it from the API as a fallback
+                if member is None:
+                    try:
+                        member = await guild.fetch_member(payload.user_id)
+                    except discord.NotFound:
+                        return # The user left the guild, do nothing
+
                 removed_role = guild.get_role(role["role"])
+
+                if removed_role is None:
+                    return # The role was likely deleted, skip it
+
                 await member.remove_roles(removed_role, reason=f"Reaction Role in embed {config['name']}")
                 return
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
         super().red_delete_data_for_user(requester=requester, user_id=user_id)
+
