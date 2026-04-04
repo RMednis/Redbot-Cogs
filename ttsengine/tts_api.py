@@ -259,7 +259,7 @@ async def filter_message(self, text: discord.Message):
 
     # Clear message if it contains too many repeated words
     # log.info(f"Repeated word percentage: {await repeated_word_filter(self, filtered)}")
-    if await repeated_word_filter(filtered) > repeated_word_percentage:
+    if repeated_word_filter(filtered) > repeated_word_percentage:
         return ""
 
     # Replace certain message patterns with more readable ones
@@ -292,6 +292,7 @@ async def filter_message(self, text: discord.Message):
         truncated = filtered[:max_message_length]
         last_space = truncated.rfind(" ")
         filtered = truncated[:last_space] if last_space > 0 else truncated
+
 
     return filtered
 
