@@ -81,9 +81,9 @@ async def whitelist_success(response_string: str):
         return True
     else:
         if response_string.startswith("Player"):
-            raise RuntimeError(f"Player %s is already whitelised!")
+            raise RuntimeError("Player %s is already whitelised!")
         elif response_string.startswith("That player does not exist"):
-            raise RuntimeError(f"Player %s does not exist!")
+            raise RuntimeError("Player %s does not exist!")
 
 
 async def whitelist_remove_success(response_string: str):
@@ -91,9 +91,9 @@ async def whitelist_remove_success(response_string: str):
         return True
     else:
         if response_string.startswith("Player"):
-            raise RuntimeError(f"Player %s is not whitelisted!")
+            raise RuntimeError("Player %s is not whitelisted!")
         elif response_string.startswith("That player does not exist"):
-            raise RuntimeError(f"Player %s does not exist!")
+            raise RuntimeError("Player %s does not exist!")
 
 # Async Wrapper Function
 async def run_rcon_command(ip: str, key: str, command: str, port: int):
