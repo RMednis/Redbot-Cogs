@@ -463,7 +463,7 @@ class PasturesIntegration(commands.Cog):
                     return
 
                 except discord.HTTPException as HttpErr:
-                    log.error("Error sending message: ", HttpErr)
+                    log.error("Error sending message: %s", HttpErr)
                     # noinspection PyUnresolvedReferences
                     await interaction.response.send_message(f"Error sending message in {channel.mention}!")
                     return
@@ -664,4 +664,4 @@ class PasturesIntegration(commands.Cog):
                                                                   guild.get_member(payload.user_id))
                         await log_channel.send(embed=embed)
                     except discord.HTTPException as HttpErr:
-                        log.error("Error sending message: ", HttpErr)
+                        log.error("Error sending message: %s", HttpErr)
