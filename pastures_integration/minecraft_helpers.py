@@ -50,21 +50,9 @@ async def check_name(input_name: str):
         else:
             raise RuntimeError(f"Mojang API call failed to find `{input_name}`. \n A unknwon error occoured.")
 
-async def split_names(input_names: str):
-    input_names = input_names.strip(" ")
-
-    if " " in input_names:
-        data = input_names.split(" ")
-        data.sort(key=len)
-        input_names = data[len(data) - 1]
-        input_names.strip(" ")
-
-    return input_names
-
 
 # Function for dealing with existing whitelist data
 async def whitelisted_players(response_string: str):
-    print(response_string)
 
     w_number_raw = response_string.split(" ")[2]
 
@@ -75,7 +63,6 @@ async def whitelisted_players(response_string: str):
 
     if w_number > 0:
         players_raw = response_string.split(":", 1)[1]
-
         players = players_raw.split(",")  # Split each player into own array element
         w_players = [player.strip(' ') for player in players]  # Strip spaces from names
 
@@ -104,7 +91,7 @@ async def whitelist_remove_success(response_string: str):
         return True
     else:
         if response_string.startswith("Player"):
-            raise RuntimeError(f"Player %s is not whitelised!")
+            raise RuntimeError(f"Player %s is not whitelisted!")
         elif response_string.startswith("That player does not exist"):
             raise RuntimeError(f"Player %s does not exist!")
 
