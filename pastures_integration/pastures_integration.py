@@ -569,8 +569,8 @@ class PasturesIntegration(commands.Cog):
                 embed = await embed_helpers.whitelist_add(ip, key, rcon_port, player, server)
                 await interaction.followup.send(embed=embed)
                 return
-        else:
-            await interaction.followup.send(f"Server `{server}` not found!")
+
+        await interaction.followup.send(f"Server `{server}` not found!")
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)
