@@ -12,33 +12,34 @@ async def find_embed(configs: list, name: str) -> dict:
 
     raise ConfigError(f"Embed '{name}' not found")
 
-async def find_embed_by_id(configs: list, message_id: int) -> dict|None:
+def find_embed_by_id(configs: list, message_id: int) -> dict|None:
     for config in configs:
         if config["message"] == message_id:
             return config
 
     return None
 
-async def embed_exists(configs: list, name: str) -> bool:
+def embed_exists(configs: list, name: str) -> bool:
     for config in configs:
         if config["name"] == name:
             return True
 
     return False
 
-async def has_fields(config: dict) -> bool:
+def has_fields(config: dict) -> bool:
     if "fields" in config:
         if isinstance(config["fields"], list):
             if len(config["fields"]) > 0:
                 return True
     return False
 
-async def has_reaction_roles(config: dict) -> bool:
+def has_reaction_roles(config: dict) -> bool:
     if "reaction_roles" in config:
         if config["reaction_roles"] is not None:
             return True
 
-async def get_reaction_roles(config: dict, emoji: str) -> list:
+
+def get_reaction_roles(config: dict, emoji: str) -> list:
     roles = []
     for role in config["reaction_roles"]:
         if role["emoji"] == emoji:
@@ -46,13 +47,13 @@ async def get_reaction_roles(config: dict, emoji: str) -> list:
 
     return roles
 
-async def get_color(color: str) -> int:
+def get_color(color: str) -> int:
     if color.startswith("#"):
         color = color[1:]
 
     return int(color, 16)
 
-async def check_keys(config: dict, keys: list) -> bool:
+def check_keys(config: dict, keys: list) -> bool:
     # Check if the config contains the required keys
     for key in keys:
         if key not in config:
@@ -60,10 +61,10 @@ async def check_keys(config: dict, keys: list) -> bool:
 
     return True
 
-async def parse_config(config: dict) -> bool:
+def parse_config(config: dict) -> bool:
     # Check if the config contains the required keys
     required_keys = ["name", "channel","message", "color"]
-    await check_keys(config, required_keys)
+    check_keys(config, required_keys)
 
     # Check if the keys are of the correct type
     if not isinstance(config["name"], str):
@@ -124,7 +125,7 @@ async def parse_config(config: dict) -> bool:
 
             field_keys = ["name", "value", "inline"]
             try:
-                await check_keys(field, field_keys)
+                check_keys(field, field_keys)
             except ConfigError as e:
                 raise ConfigError(f"'fields' section error: {e}")
 
@@ -144,7 +145,7 @@ async def parse_config(config: dict) -> bool:
 
         for role in config["reaction_roles"]:
             try:
-                await check_keys(role, ["emoji", "role", "unique", "allowlist", "denylist"])
+                check_keys(role, ["emoji", "role", "unique", "allowlist", "denylist"])
             except ConfigError as e:
                 raise ConfigError(f"`reaction_roles` > `{role}` error: {e}")
 
@@ -162,7 +163,7 @@ async def parse_config(config: dict) -> bool:
 
     return True
 
-async def default_config() -> dict:
+def default_config() -> dict:
     return {
             "name": "",
             "channel": "",
@@ -194,7 +195,7 @@ async def default_config() -> dict:
             "timestamp": "2025-01-01T00:00:00"
     }
 
-async def create_reaction_role(emoji: str, role: int, unique: bool) -> dict:
+def create_reaction_role(emoji: str, role: int, unique: bool) -> dict:
 
 
     return {
@@ -205,11 +206,11 @@ async def create_reaction_role(emoji: str, role: int, unique: bool) -> dict:
         "denylist": []
     }
 
-async def create_embed(config: dict) -> discord.Embed:
+def create_embed(config: dict) -> discord.Embed:
     # We have to set the color manually
     if "color" in config:
         # Convert the color to an integer
-        embed = discord.Embed(color=await get_color(config["color"]))
+        embed = discord.Embed(color=get_color(config["color"]))
     else:
         # Default color
         embed = discord.Embed()

@@ -67,21 +67,21 @@ class ReactionRoles(commands.Cog):
         # Defer the responsem, this might take a while
         await interaction.response.defer()
 
-        if await config_parser.embed_exists(embed_configs, name):
+        if config_parser.embed_exists(embed_configs, name):
             return await interaction.followup.send(f"Embed `{name}` already exists."
                                                            f"\nYou should modify it or remove it using `/embed edit {name}` "
                                                            f"or `/embed remove {name}`", ephemeral=False)
 
         if config is None:
             # Setup the default config and return it to the user
-            default_config = await config_parser.default_config()
+            default_config = config_parser.default_config()
             default_config["name"] = name
 
             if channel is not None:
                 # Set the channel
                 default_config["channel"] = channel.id
                 # Send the message
-                message = await channel.send(embed=await config_parser.create_embed(default_config))
+                message = await channel.send(embed = config_parser.create_embed(default_config))
                 default_config["message"] = message.id
 
             # Add the config to the list
@@ -106,7 +106,7 @@ class ReactionRoles(commands.Cog):
 
                 # Load and parse the settings
                 settings = json.loads(data)
-                await config_parser.parse_config(settings)
+                config_parser.parse_config(settings)
 
                 # Create the embed
                 channel = interaction.guild.get_channel(settings["channel"])
@@ -114,7 +114,7 @@ class ReactionRoles(commands.Cog):
                 if channel is None:
                     return await interaction.followup.send("Invalid channel", ephemeral=False)
 
-                message = await channel.send(embed=await config_parser.create_embed(settings))
+                message = await channel.send(embed=config_parser.create_embed(settings))
                 settings["message"] = message.id
 
                 # Add the config to the list
@@ -134,14 +134,14 @@ class ReactionRoles(commands.Cog):
 
         await interaction.response.defer()
 
-        if not await config_parser.embed_exists(embed_configs, name):
+        if not config_parser.embed_exists(embed_configs, name):
             return await interaction.followup.send(f"Embed `{name}` does not exist."
                                                            f"\nYou should create it using `/embed create {name}`",
                                                            ephemeral=True)
 
         if config is None:
             # Get the config
-            config = await config_parser.find_embed(embed_configs, name)
+            config = config_parser.find_embed(embed_configs, name)
 
             # Create a config file for the user to download
             config_file = io.BytesIO(json.dumps(config, indent=4).encode('UTF-8'))
@@ -160,7 +160,7 @@ class ReactionRoles(commands.Cog):
 
             # Load and parse the settings
             settings = json.loads(data)
-            await config_parser.parse_config(settings)
+            config_parser.parse_config(settings)
 
         except json.JSONDecodeError:
             return await interaction.followup.send("Error loading config: `Invalid JSON`", ephemeral=False)
@@ -170,7 +170,7 @@ class ReactionRoles(commands.Cog):
         # Find the embed, edit it
         channel = interaction.guild.get_channel(settings["channel"])
         message = await channel.fetch_message(settings["message"])
-        await message.edit(embed=await config_parser.create_embed(settings))
+        await message.edit(embed = config_parser.create_embed(settings))
 
         # Update the config
         for i, embed in enumerate(embed_configs):
@@ -189,14 +189,14 @@ class ReactionRoles(commands.Cog):
 
         await interaction.response.defer()
 
-        if not await config_parser.embed_exists(embed_configs, name):
+        if not config_parser.embed_exists(embed_configs, name):
             return await interaction.followup.send(f"Embed `{name}` does not exist."
                                                            f"\nYou should create it using `/embed create {name}`",
                                                            ephemeral=True)
 
         try:
             # Find the embed
-            embed_config = await config_parser.find_embed(embed_configs, name)
+            embed_config = config_parser.find_embed(embed_configs, name)
 
             # Delete the message if requested
             if delete_messages:
@@ -208,7 +208,10 @@ class ReactionRoles(commands.Cog):
 
             # Remove the embed from the list
             embed_configs.remove(embed_config)
+
+            # Save the config
             await self.config.guild(interaction.guild).embeds.set(embed_configs)
+            return await interaction.followup.send(f"Embed `{name}` has been removed", ephemeral=False)
 
         except config_parser.ConfigError as e:
             return await interaction.followup.send(f"Error removing embed: `{str(e)}`", ephemeral=False)
@@ -228,7 +231,7 @@ class ReactionRoles(commands.Cog):
         await interaction.response.defer()
         embed_configs = await self.config.guild(interaction.guild).embeds()
 
-        if not await config_parser.embed_exists(embed_configs, name):
+        if not config_parser.embed_exists(embed_configs, name):
             return await interaction.followup.send(f"Embed `{name}` does not exist."
                                                            f"\nYou should create it using `/embed create {name}`",
                                                            ephemeral=False)
@@ -236,16 +239,16 @@ class ReactionRoles(commands.Cog):
         partial_emoji = PartialEmoji.from_str(emoji)
 
         # Find the embed
-        embed_config = await config_parser.find_embed(embed_configs, name)
+        embed_config = config_parser.find_embed(embed_configs, name)
 
         # Check if the embed has reaction roles
         # If not, create an empty list
-        if not await config_parser.has_reaction_roles(embed_config):
+        if not config_parser.has_reaction_roles(embed_config):
             embed_config["reaction_roles"] = []
 
 
         # Check if the emoji already has a role
-        reaction_roles = await config_parser.get_reaction_roles(embed_config, emoji)
+        reaction_roles = config_parser.get_reaction_roles(embed_config, emoji)
         if len(reaction_roles) > 0:
             return await interaction.followup.send(f"Reaction role for `{emoji}` already exists."
                                                    f"Remove it with `/embed remove_reaction {name} {emoji}`",
@@ -278,7 +281,7 @@ class ReactionRoles(commands.Cog):
                     await message.add_reaction(emoji)
 
                     # Reaction role data
-                    role_data = await config_parser.create_reaction_role(str(partial_emoji), role.id, unique)
+                    role_data = config_parser.create_reaction_role(str(partial_emoji), role.id, unique)
 
                     # Add the reaction role
                     reaction_roles.append(role_data)
@@ -303,20 +306,20 @@ class ReactionRoles(commands.Cog):
         await interaction.response.defer()
         embed_configs = await self.config.guild(interaction.guild).embeds()
 
-        if not await config_parser.embed_exists(embed_configs, name):
+        if not config_parser.embed_exists(embed_configs, name):
             return await interaction.followup.send(f"Embed `{name}` does not exist."
                                                            f"\nYou should create it using `/embed create {name}`",
                                                            ephemeral=False)
 
         # Find the embed
-        embed_config = await config_parser.find_embed(embed_configs, name)
+        embed_config = config_parser.find_embed(embed_configs, name)
 
         # Check if the embed has reaction roles
-        if not await config_parser.has_reaction_roles(embed_config):
+        if not config_parser.has_reaction_roles(embed_config):
             return await interaction.followup.send(f"Embed `{name}` does not have any reaction roles", ephemeral=False)
 
         # Check if the emoji already has a role
-        reaction_roles_with_emoji = await config_parser.get_reaction_roles(embed_config, emoji)
+        reaction_roles_with_emoji = config_parser.get_reaction_roles(embed_config, emoji)
         if len(reaction_roles_with_emoji) == 0:
             return await interaction.followup.send(f"Reaction role for `{emoji}` does not exist.", ephemeral=False)
 
@@ -348,7 +351,7 @@ class ReactionRoles(commands.Cog):
 
         await interaction.response.defer()
 
-        if not await config_parser.embed_exists(embed_configs, embed):
+        if not config_parser.embed_exists(embed_configs, embed):
             return await interaction.followup.send(f"Embed `{embed}` does not exist."
                                                            f"\nYou should create it using `/embed create {embed}`",
                                                            ephemeral=False)
@@ -380,7 +383,7 @@ class ReactionRoles(commands.Cog):
             return
 
         embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
-        config = await config_parser.find_embed_by_id(embed_configs, payload.message_id)
+        config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
         if config is None:
             return
 
@@ -440,7 +443,7 @@ class ReactionRoles(commands.Cog):
             return
 
         embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
-        config = await config_parser.find_embed_by_id(embed_configs, payload.message_id)
+        config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
         if config is None:
             return
 
