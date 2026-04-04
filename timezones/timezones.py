@@ -76,6 +76,9 @@ class Timezones(commands.Cog):
         async for guild in AsyncIter(self.bot.guilds):
 
             guild = self.bot.get_guild(guild.id)
+            if guild is None:
+                continue
+
             log.info(f"Updating time list for {guild.name}: {guild.id}")
 
             persistent_channel = await self.config.guild(guild).persistent_channel()
@@ -162,8 +165,8 @@ class Timezones(commands.Cog):
             user2 = user
             user = interaction.user
 
-        user1_timezone = await self.config.user(user2).timezone()
-        user2_timezone = await self.config.user(user).timezone()
+        user1_timezone = await self.config.user(user).timezone()
+        user2_timezone = await self.config.user(user2).timezone()
 
         if user1_timezone != "" and user2_timezone != "":
             difference = await time_convert.timezone_difference(user1_timezone, user2_timezone)

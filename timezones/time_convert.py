@@ -84,9 +84,7 @@ async def dst_status(iana_name: str) -> str:
 
 
 async def timezone_difference(iana_name1: str, iana_name2: str) -> str:
-    utc_now = datetime.now(zoneinfo.ZoneInfo("UTC"))
-
-    dt = datetime.now()  # 2020-09-13
+    dt = datetime.now(zoneinfo.ZoneInfo("UTC"))  # 2020-09-13
     tz0 = zoneinfo.ZoneInfo(iana_name1)
     tz1 = zoneinfo.ZoneInfo(iana_name2)
 
@@ -136,7 +134,7 @@ async def convert_time_between_zones(from_timezone: str, to_timezone: str, time:
 async def get_times_for_all_timezones(times: list[(str, str)]) -> list[(str, str, datetime)]:
     time_list = []  # List of tuples containing the user's ID, timezone and the current time
 
-    current_time = datetime.now()  # Get the current time
+    current_time = datetime.now(zoneinfo.ZoneInfo("UTC"))  # Get the current time
 
     for userid, timezone in times:  # Loop through the list of user IDs and timezones
         time = current_time.astimezone(zoneinfo.ZoneInfo(timezone))  # Get the current time in the user's timezone
