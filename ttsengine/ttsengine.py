@@ -136,8 +136,6 @@ class TTSEngine(commands.Cog):
         # Unload app commands when unloading cog
         self.bot.tree.remove_command(self.blacklist_add_app.name, type=self.blacklist_add_app.type)
         self.bot.tree.remove_command(self.blacklist_remove_app.name, type=self.blacklist_remove_app.type)
-
-    def __unload(self):
         lavalink.unregister_event_listener(self.lavalink_events)
         file_manager.cleanup_audio(self)
 
@@ -182,12 +180,12 @@ class TTSEngine(commands.Cog):
 
     @tts_settings.command(name="add_word_substitution", description="Add a word substitution")
     @app_commands.guild_only()
-    async def tts_add_name_substitution(self, interaction: discord.Interaction, source: str, substitution: str):
+    async def tts_add_word_substitution(self, interaction: discord.Interaction, source: str, substitution: str):
         words = await self.config.guild(interaction.guild).word_replacements()
         if source not in words.keys():
             words[source] = substitution
             await self.config.guild(interaction.guild).word_replacements.set(words)
-            await interaction.response.send_message(f"Added word substiution `{source}`:`{substitution}` to word "
+            await interaction.response.send_message(f"Added word substitution `{source}`:`{substitution}` to word "
                                                     f"replacements.")
         else:
             await interaction.response.send_message(f"Substitution already exists for `{source}`")
@@ -222,7 +220,7 @@ class TTSEngine(commands.Cog):
         if source in words.keys():
             words.pop(source)
             await self.config.guild(interaction.guild).name_replacements.set(words)
-            await interaction.response.send_message(f"Removed word substitution for name `{source}`")
+            await interaction.response.send_message(f"Removed name substitution for name `{source}`")
         else:
             await interaction.response.send_message(f"`{source}` does not have a name substitution!")
 
@@ -236,7 +234,7 @@ class TTSEngine(commands.Cog):
             return
 
         if file is None:
-            json_reponse = {
+            json_response = {
                 "regular_voices": await self.config.regular_voices(),
                 "extra_voices": await self.config.extra_voices(),
                 "statistics": await self.config.statistics(),
@@ -245,7 +243,7 @@ class TTSEngine(commands.Cog):
                 "local_api_url": await self.config.local_api_url(),
                 "public_api_url": await self.config.public_api_url()
             }
-            json_bytes = io.BytesIO(json.dumps(json_reponse, indent=4).encode('utf-8'))
+            json_bytes = io.BytesIO(json.dumps(json_response, indent=4).encode('utf-8'))
             tts_file = discord.File(json_bytes, filename="tts_settings.json")
 
             await interaction.followup.send("Here's the current global settings.\n"
@@ -350,26 +348,31 @@ class TTSEngine(commands.Cog):
 
                 case "whitelisted_channels":
                     channels = ""
+                    stale_ids = []
                     for channel in value:
-                        if (channel is not None) and (interaction.guild.get_channel(channel) is not None):
-                            channels += f" {interaction.guild.get_channel(channel).mention},"
+                        resolved = interaction.guild.get_channel(channel)
+                        if resolved:
+                            channels += f" {resolved.mention},"
                         else:
-                            # Remove the channel from the list
-                            channel_list = await self.config.guild(interaction.guild).whitelisted_channels()
-                            channel_list.remove(channel)
-                            await self.config.guild(interaction.guild).whitelisted_channels.set(channel_list)
-
-                    embed.add_field(name="Whitelisted Channels", value=channels)
+                            stale_ids.append(channel)
+                    if stale_ids:
+                        cleaned = [cid for cid in value if cid not in stale_ids]
+                        await self.config.guild(interaction.guild).whitelisted_channels.set(cleaned)
+                    embed.add_field(name="Whitelisted Channels", value=channels or "`None`")
 
                 case "blacklisted_users":
                     users = ""
+                    stale_ids = []
                     for user in value:
-                        users += f" {interaction.guild.get_member(user).mention},"
-
-                    if users == "":
-                        users = "`None`"
-
-                    embed.add_field(name="Blacklisted Users", value=users)
+                        member = interaction.guild.get_member(user)
+                        if member:
+                            users += f" {member.mention},"
+                        else:
+                            stale_ids.append(user)
+                    if stale_ids:
+                        cleaned = [uid for uid in value if uid not in stale_ids]
+                        await self.config.guild(interaction.guild).blacklisted_users.set(cleaned)
+                    embed.add_field(name="Blacklisted Users", value=users or "`None`")
 
                 case "name_replacements":
                     replacement_list = ""
@@ -428,8 +431,8 @@ class TTSEngine(commands.Cog):
 
     @tts_blacklist.command(name="add", description="Prevent a user from using the TTS")
     @app_commands.guild_only()
-    async def blacklist_add_cmd(self, interaction: discord, user: discord.Member):
-        await self.blacklist_add(self, interaction, user)
+    async def blacklist_add_cmd(self, interaction: discord.Interaction, user: discord.Member):
+        await self.blacklist_add(interaction, user)
 
     async def blacklist_add(self, interaction: discord.Interaction, user: discord.Member):
         blacklist = await self.config.guild(interaction.guild).blacklisted_users()
@@ -444,8 +447,8 @@ class TTSEngine(commands.Cog):
 
     @tts_blacklist.command(name="remove", description="Allow a  user to use TTS")
     @app_commands.guild_only()
-    async def blacklist_remove_cmd(self, interaction: discord, user: discord.Member):
-        await self.blacklist_remove(self, interaction, user)
+    async def blacklist_remove_cmd(self, interaction: discord.Interaction[Red], user: discord.Member):
+        await self.blacklist_remove(interaction, user)
 
     async def blacklist_remove(self, interaction: discord.Interaction, user: discord.Member):
         blacklist = await self.config.guild(interaction.guild).blacklisted_users()
@@ -462,15 +465,25 @@ class TTSEngine(commands.Cog):
     @app_commands.guild_only()
     async def blacklist_list(self, interaction: discord.Interaction):
         blacklist = await self.config.guild(interaction.guild).blacklisted_users()
+
         user_list = ""
+        stale_ids = []
+
         for user_id in blacklist:
             member = interaction.guild.get_member(user_id)
-            user_list = user_list + member.display_name + "\n"
+            if member:
+                user_list += f"{member.display_name}\n"
+            else:
+                stale_ids.append(user_id)
+
+        if stale_ids:
+            cleaned = [uid for uid in blacklist if uid not in stale_ids]
+            await self.config.guild(interaction.guild).blacklisted_users.set(cleaned)
 
         if user_list == "":
             user_list = "None"
 
-        await interaction.response.send_message(f"## TTS Blacklisted users:\n `{user_list}`")
+        await interaction.response.send_message(f"## TTS Blacklisted users:\n`{user_list}`")
 
     tts_channels = app_commands.Group(name="tts_channels", description="Whitelisted TTS channels", guild_only=True)
 
@@ -478,7 +491,13 @@ class TTSEngine(commands.Cog):
     @app_commands.guild_only()
     async def whitelist_addtext(self, interaction: discord.Interaction, channel: discord.TextChannel):
         whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
+
+        if channel.id in whitelist:
+            await interaction.response.send_message(f"{channel.mention} is already whitelisted!")
+            return
+
         whitelist.append(channel.id)
+
         await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
         await interaction.response.send_message(f"Added channel {channel.mention} to TTS whitelist!")
 
@@ -486,14 +505,24 @@ class TTSEngine(commands.Cog):
     @app_commands.guild_only()
     async def whitelist_addvc(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
         whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
+
+        if channel.id in whitelist:
+            await interaction.response.send_message(f"{channel.mention} is already whitelisted!")
+            return
+
         whitelist.append(channel.id)
         await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
         await interaction.response.send_message(f"Added channel {channel.mention} to TTS whitelist!")
 
-    @tts_channels.command(name="remove_vc", description="Add whitelisted channel for TTS text")
+    @tts_channels.command(name="remove_vc", description="Remove whitelisted voice channel for TTS text")
     @app_commands.guild_only()
     async def whitelist_removevc(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
         whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
+
+        if channel.id not in whitelist:
+            await interaction.response.send_message(f"{channel.mention} is not in the whitelist!")
+            return
+
         whitelist.remove(channel.id)
         await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
         await interaction.response.send_message(f"Removed channel {channel.mention} from TTS whitelist!")
@@ -502,6 +531,11 @@ class TTSEngine(commands.Cog):
     @app_commands.guild_only()
     async def whitelist_removetext(self, interaction: discord.Interaction, channel: discord.TextChannel):
         whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
+
+        if channel.id not in whitelist:
+            await interaction.response.send_message(f"{channel.mention} is not in the whitelist!")
+            return
+
         whitelist.remove(channel.id)
         await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
         await interaction.response.send_message(f"Removed channel {channel.mention} from TTS whitelist!")
@@ -511,9 +545,19 @@ class TTSEngine(commands.Cog):
     async def whitelist_list(self, interaction: discord.Interaction):
         whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
 
-        message = "Whitelisted TTS Channels: "
+        message = "Whitelisted TTS Channels:"
+        stale_ids = []
+
         for channel_id in whitelist:
-            message += "\n" + interaction.guild.get_channel(channel_id).mention
+            channel = interaction.guild.get_channel(channel_id)
+            if channel:
+                message += f"\n{channel.mention}"
+            else:
+                stale_ids.append(channel_id)
+
+        if stale_ids:
+            cleaned = [cid for cid in whitelist if cid not in stale_ids]
+            await self.config.guild(interaction.guild).whitelisted_channels.set(cleaned)
 
         await interaction.response.send_message(message)
 
@@ -597,10 +641,6 @@ class TTSEngine(commands.Cog):
         # Sanity check the options since autocomplete is not mandatory
         for voice_option in await self.config.regular_voices():
             if voice_option["value"] == voice:
-                break
-            elif voice_option["value"] == "disable":
-                break
-            elif voice_option["value"] == "Extra":
                 break
         else:
             await interaction.response.send_message("❌ Invalid voice selected.", ephemeral=True)
@@ -703,7 +743,8 @@ class TTSEngine(commands.Cog):
                     await message.reply("❌ You are not in a VC, your messages will not be read out until you join."
                                         , delete_after = 10)
                     await self.config.user(message.author).warning_notts.set(True)
-                    return
+
+                return
 
             voice_clients = discord.utils.get(self.bot.voice_clients, guild=message.guild)
 
