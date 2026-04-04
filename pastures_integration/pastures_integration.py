@@ -339,9 +339,13 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
 
-        if PartialEmoji.from_str(emote) is None:
+        parsed = PartialEmoji.from_str(emote)
+
+        # If the emote is not a custom emote, it should be a unicode emoji.
+        # A unicode emoji is not ascii :D
+        if parsed.id is None and emote.isascii():
             # noinspection PyUnresolvedReferences
-            await interaction.response.send_message("Invalid emote!")
+            await interaction.response.send_message("Invalid emote! (Should be a custom emote or a unicode emoji)")
             return
 
         for s in servers:
@@ -643,9 +647,12 @@ class PasturesIntegration(commands.Cog):
 
         # Check if the reaction is a whitelisting reaction for one of the servers
         for s in servers:
+            log.info("Raeaction added, checking if it's a one-click whitelisting reaction for server %s", s["name"])
             if s["config"].get("one_click_whitelist"):
                 # The server has one-click whitelisting enabled
-                if str(payload.emoji) == s["config"]["one_click_emoji"]:
+                log.info(f"{PartialEmoji.from_str(s['config']['one_click_emoji'])} == {payload.emoji}")
+
+                if payload.emoji == PartialEmoji.from_str(s["config"]["one_click_emoji"]):
                     # Emoji matches the one-click emoji, lets do this!
                     ip = s["ip"]
                     key = s["key"]
@@ -661,5 +668,6 @@ class PasturesIntegration(commands.Cog):
                         embed = await embed_helpers.whitelist_add(ip, key, rcon_port, player, s["name"],
                                                                   guild.get_member(payload.user_id))
                         await log_channel.send(embed=embed)
+                        log.info(f"Whitelisting player {player} on server {s['name']} for user {payload.user_id}!")
                     except discord.HTTPException as HttpErr:
                         log.error("Error sending message: %s", HttpErr)
