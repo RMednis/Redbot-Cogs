@@ -54,7 +54,6 @@ class PasturesIntegration(commands.Cog):
         await self.bot.wait_until_ready()
 
         async for guild in AsyncIter(self.bot.guilds):
-            guild = self.bot.get_guild(guild.id)
             guild_config = self.config.guild_from_id(guild.id)
 
             servers = await guild_config.servers()
@@ -92,7 +91,7 @@ class PasturesIntegration(commands.Cog):
                     changed = True
 
                 except discord.HTTPException as HttpErr:
-                    log.error("Error editing message: ", HttpErr)
+                    log.error("Error editing message: %s", HttpErr)
 
             if changed:
                 log.info("Saving changes to server config!")
