@@ -36,9 +36,9 @@ class ReactionRoles(commands.Cog):
         embed_configs = await self.config.guild(interaction.guild).embeds()
 
         return [
-            discord.app_commands.Choice(name=embed_configs["name"], value=embed_configs["name"])
-            for embed_configs in embed_configs
-            if name in embed_configs["name"]
+            discord.app_commands.Choice(name=embed["name"], value=embed["name"])
+            for embed in embed_configs
+            if name in embed["name"]
         ]
 
     async def embed_emote_autocomplete(self, interaction: discord.Interaction, emote: str):
