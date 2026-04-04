@@ -37,10 +37,10 @@ async def player_count(response_string: str):
 async def check_name(input_name: str):
     api = mojang.API()
     try:
-        uuid = api.get_uuid(input_name)
+        uuid = await asyncio.to_thread(api.get_uuid,input_name)
         if not uuid:
             raise RuntimeError(f"Could not find user `{input_name}` from mojang!")
-        return api.get_username(uuid)
+        return  await asyncio.to_thread(api.get_username, uuid)
     except mojang.errors.MojangError as err:
         logging.error(f"Error occurred while trying to resolve the username `{input_name}`: {err}")
         if "HTTP 429" in str(err):
