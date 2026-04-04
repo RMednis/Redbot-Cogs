@@ -353,19 +353,22 @@ class ReactionRoles(commands.Cog):
                                                            ephemeral=False)
 
         # Find the embed
-        embed_config = await config_parser.find_embed(embed_configs, embed)
+        embed_config = config_parser.find_embed(embed_configs, embed)
+
+        # Embed url
+        embed_url = f"https://discord.com/channels/{interaction.guild.id}/{embed_config['channel']}/{embed_config['message']}"
 
         # Check if the embed has reaction roles
-        if not await config_parser.has_reaction_roles(embed_config):
-            return await interaction.followup.send(f"Embed `{embed}` does not have any reaction roles", ephemeral=False)
+        if not config_parser.has_reaction_roles(embed_config):
+            return await interaction.followup.send(f"Embed `{embed}` ({embed_url}) does not have any reaction roles", ephemeral=False)
 
         # Get the reaction roles
         reaction_roles = embed_config["reaction_roles"]
         if len(reaction_roles) == 0:
-            return await interaction.followup.send(f"Embed `{embed}` does not have any reaction roles.", ephemeral=False)
+            return await interaction.followup.send(f"Embed `{embed}` ({embed_url}) does not have any reaction roles.", ephemeral=False)
         else:
             # Create the message
-            message = f"Reaction roles for `{embed}`:"
+            message = f"Reaction roles for `{embed}` ({embed_url}):"
             for role in reaction_roles:
                 message += f"\n- {role['emoji']} - <@&{role['role']}>"
                 if role["unique"]:
