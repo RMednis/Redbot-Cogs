@@ -1,9 +1,11 @@
 import io
 import json
 import logging
+from collections import defaultdict
 from typing import Literal
 
 import discord
+import asyncio
 from discord import app_commands, PartialEmoji
 from redbot.core import commands
 from redbot.core.bot import Red
@@ -57,7 +59,7 @@ class ReactionRoles(commands.Cog):
 
     embed = app_commands.Group(name="embed", description="Embed and Reaction role management", guild_only=True)
 
-
+    reaction_role_locks: dict = defaultdict(asyncio.Lock)
 
     @embed.command(name="create", description="Create a new embed")
     async def embed_create(self, interaction: discord.Interaction, name: str, config: discord.Attachment = None,
@@ -435,97 +437,109 @@ class ReactionRoles(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-        embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
-        config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
+        async with self.reaction_role_locks[(payload.guild_id, payload.user_id)]:
+            embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
+            config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
 
-        # Check if the message is one of our embeds, if not, do nothing
-        if config is None:
-            return
+            # Check if the message is one of our embeds, if not, do nothing
+            if config is None:
+                return
 
-        # Check if the embed has reaction roles, if not, do nothing
-        if not config_parser.has_reaction_roles(config):
-            return
+            # Check if the embed has reaction roles, if not, do nothing
+            if not config_parser.has_reaction_roles(config):
+                return
 
-        for reaction_role in config["reaction_roles"]:
-            if reaction_role["emoji"] == str(payload.emoji):
-                guild = self.bot.get_guild(payload.guild_id)
-                member = guild.get_member(payload.user_id)
+            for reaction_role in config["reaction_roles"]:
+                if reaction_role["emoji"] == str(payload.emoji):
+                    guild = self.bot.get_guild(payload.guild_id)
+                    member = guild.get_member(payload.user_id)
 
-                # We normally use the cached member object, but if the cache doesn't have the member for some reason
-                # we can fetch it from the API as a fallback
-                if member is None:
-                    try:
-                        member = await guild.fetch_member(payload.user_id)
-                    except discord.NotFound:
-                        return # The user left the guild, do nothing
+                    # We normally use the cached member object, but if the cache doesn't have the member for some reason
+                    # we can fetch it from the API as a fallback
+                    if member is None:
+                        try:
+                            member = await guild.fetch_member(payload.user_id)
+                        except discord.NotFound:
+                            return # The user left the guild, do nothing
 
-                if len(reaction_role["denylist"]) > 0:
-                    for role in reaction_role["denylist"]:
-                        denylist_role = guild.get_role(role)
-                        if denylist_role in member.roles:
-                            return # Do nothing if the user has a denylisted role
+                    if len(reaction_role["denylist"]) > 0:
+                        for role in reaction_role["denylist"]:
+                            denylist_role = guild.get_role(role)
+                            if denylist_role in member.roles:
+                                return # Do nothing if the user has a denylisted role
 
 
-                if len(reaction_role["allowlist"]) > 0:
-                    allowed = False
-                    for role in reaction_role["allowlist"]:
-                        allowlist_role = guild.get_role(role)
+                    if len(reaction_role["allowlist"]) > 0:
+                        allowed = False
+                        for role in reaction_role["allowlist"]:
+                            allowlist_role = guild.get_role(role)
 
-                        if allowlist_role is None:
-                            continue # The role was likely deleted, skip it
-
-                        if allowlist_role in member.roles:
-                            # Allow the user to get the role
-                            allowed = True
-                            break
-                    if not allowed:
-                        return  # Do nothing if the user does not have an allowlisted role
-
-                added_role = guild.get_role(reaction_role["role"])
-
-                if added_role is None:
-                    return # The role was likely deleted, skip it
-
-                # Remove all other roles if unique is set on the added role
-                if reaction_role["unique"]:
-                    # Remove the reaction
-                    channel = guild.get_channel(config["channel"])
-
-                    if channel is None:
-                        return # Channel was deleted, do nothing
-
-                    try:
-                        message = await channel.fetch_message(config["message"])
-                    except discord.NotFound:
-                        return # Message was deleted, do nothing
-                    except discord.Forbidden:
-                        return # We don't have permission to fetch the message, do nothing
-
-                    roles_to_remove = [] # Cache the roles to remove so we can remove them all at once
-                    for role in config["reaction_roles"]:
-                        if role["emoji"] != str(payload.emoji):
-                            # Remove the reaction
-                            try:
-                                await message.remove_reaction(role["emoji"], member)
-                            except discord.NotFound:
-                                pass # The reaction was already removed, do nothing
-                            except discord.Forbidden:
-                                pass # We don't have permission to manage reactions, do nothing
-
-                            # Remove the role
-                            removed_role = guild.get_role(role["role"])
-                            if removed_role is None:
+                            if allowlist_role is None:
                                 continue # The role was likely deleted, skip it
 
-                            roles_to_remove.append(removed_role)
+                            if allowlist_role in member.roles:
+                                # Allow the user to get the role
+                                allowed = True
+                                break
+                        if not allowed:
+                            return  # Do nothing if the user does not have an allowlisted role
 
-                    # Remove the roles, send the reason to the modlog
-                    await member.remove_roles(*roles_to_remove, reason=f"Unique reaction role {reaction_role['role']}"
-                                                                   f" in embed {config['name']}")
+                    added_role = guild.get_role(reaction_role["role"])
 
-                # Add the role
-                await member.add_roles(added_role, reason=f"Reaction Role in embed {config['name']}")
-                return
+                    if added_role is None:
+                        return # The role was likely deleted, skip it
+
+                    # Remove all other roles if unique is set on the added role
+                    if reaction_role["unique"]:
+                        # Remove the reaction
+                        channel = guild.get_channel(config["channel"])
+
+                        if channel is None:
+                            return # Channel was deleted, do nothing
+
+                        try:
+                            message = await channel.fetch_message(config["message"])
+                        except discord.NotFound:
+                            return # Message was deleted, do nothing
+                        except discord.Forbidden:
+                            return # We don't have permission to fetch the message, do nothing
+
+                        roles_to_remove = [] # Cache the roles to remove so we can remove them all at once
+                        for role in config["reaction_roles"]:
+                            if role["emoji"] != str(payload.emoji):
+                                # Remove the reaction
+                                try:
+                                    await message.remove_reaction(role["emoji"], member)
+                                except discord.NotFound:
+                                    pass # The reaction was already removed, do nothing
+                                except discord.Forbidden:
+                                    pass # We don't have permission to manage reactions, do nothing
+
+                                # Remove the role
+                                removed_role = guild.get_role(role["role"])
+                                if removed_role is None:
+                                    continue # The role was likely deleted, skip it
+
+                                if removed_role not in member.roles:
+                                    continue # The user doesn't have the role, skip it
+
+                                roles_to_remove.append(removed_role)
+
+                        # Make a list of all the roles for the user
+                        new_roles = [new_role for new_role in member.roles if new_role not in roles_to_remove]
+
+                        # Check if the role we need to add is in the list of roles, if not add it.
+                        if added_role not in new_roles:
+                            new_roles.append(added_role)
+
+
+                        # Remove the roles, send the reason to the modlog
+                        await member.edit(roles=new_roles, reason=f"Unique reaction role {reaction_role['role']} in embed {config['name']}")
+                        return
+
+                    # Add the role (Non Unique or after removing the other roles if unique is set)
+                    await member.add_roles(added_role, reason=f"Reaction Role in embed {config['name']}")
+                    return
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
@@ -534,37 +548,39 @@ class ReactionRoles(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-        embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
-        config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
+        # We need to lock since we are doing multiple operations that need to be atomic to prevent race conditions
+        async with self.reaction_role_locks[(payload.guild_id, payload.user_id)]:
+            embed_configs = await self.config.guild_from_id(payload.guild_id).embeds()
+            config = config_parser.find_embed_by_id(embed_configs, payload.message_id)
 
-        # Check if the message is one of our embeds, if not, do nothing
-        if config is None:
-            return
-
-        # Check if the embed has reaction roles, if not, do nothing
-        if not config_parser.has_reaction_roles(config):
-            return
-
-        for role in config["reaction_roles"]:
-            if role["emoji"] == str(payload.emoji):
-                guild = self.bot.get_guild(payload.guild_id)
-                member = guild.get_member(payload.user_id)
-
-                # We normally use the cached member object, but if the cache doesn't have the member for some reason
-                # we can fetch it from the API as a fallback
-                if member is None:
-                    try:
-                        member = await guild.fetch_member(payload.user_id)
-                    except discord.NotFound:
-                        return # The user left the guild, do nothing
-
-                removed_role = guild.get_role(role["role"])
-
-                if removed_role is None:
-                    return # The role was likely deleted, skip it
-
-                await member.remove_roles(removed_role, reason=f"Reaction Role in embed {config['name']}")
+            # Check if the message is one of our embeds, if not, do nothing
+            if config is None:
                 return
+
+            # Check if the embed has reaction roles, if not, do nothing
+            if not config_parser.has_reaction_roles(config):
+                return
+
+            for role in config["reaction_roles"]:
+                if role["emoji"] == str(payload.emoji):
+                    guild = self.bot.get_guild(payload.guild_id)
+                    member = guild.get_member(payload.user_id)
+
+                    # We normally use the cached member object, but if the cache doesn't have the member for some reason
+                    # we can fetch it from the API as a fallback
+                    if member is None:
+                        try:
+                            member = await guild.fetch_member(payload.user_id)
+                        except discord.NotFound:
+                            return # The user left the guild, do nothing
+
+                    removed_role = guild.get_role(role["role"])
+
+                    if removed_role is None:
+                        return # The role was likely deleted, skip it
+
+                    await member.remove_roles(removed_role, reason=f"Reaction Role in embed {config['name']}")
+                    return
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
         super().red_delete_data_for_user(requester=requester, user_id=user_id)
