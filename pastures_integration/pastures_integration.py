@@ -193,8 +193,6 @@ class PasturesIntegration(commands.Cog):
         guild_config = self.config.guild(interaction.guild)
         servers = await guild_config.servers()
 
-        log.info(f"Servers: {servers}")
-
         if not servers:
             # noinspection PyUnresolvedReferences
             await interaction.response.send_message("There are no servers added!\n"
