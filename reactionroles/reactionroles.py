@@ -498,10 +498,11 @@ class ReactionRoles(commands.Cog):
                             return # Channel was deleted, do nothing
 
                         try:
-                            message = await channel.fetch_message(config["message"])
+                            message = channel.get_partial_message(config["message"])
                         except discord.NotFound:
                             return # Message was deleted, do nothing
                         except discord.Forbidden:
+
                             return # We don't have permission to fetch the message, do nothing
 
                         roles_to_remove = [] # Cache the roles to remove so we can remove them all at once
