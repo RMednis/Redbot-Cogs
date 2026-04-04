@@ -166,8 +166,8 @@ def parse_config(config: dict) -> bool:
 def default_config() -> dict:
     return {
             "name": "",
-            "channel": "",
-            "message": "",
+            "channel": 0,
+            "message": 0,
 
             "title_text": "This is an example embed",
             "title_url": "",
