@@ -73,6 +73,9 @@ async def generate_tts(self, message: discord.Message):
 
     voice = await self.config.user(message.author).voice()
 
+    if not text:
+        return
+
     try:
         if self.config.statistics:  # await self.config.statistics():
             # Start timing the API request
@@ -117,20 +120,18 @@ async def generate_tts(self, message: discord.Message):
             log.error(err)
 
 
-async def repeated_word_filter(text: str):
-    # Tokenize the text into words
-    words = text.split()
+def repeated_word_filter(text: str) -> float:
+    # Strip punctuation and normalize case
+    words = re.sub(r"[^\w\s]", "", text.lower()).split()
 
-    # Count the occurrences of each word
-    word_counts = Counter(words)
+    if not words:
+        return 0.0
 
-    # Calculate the percentage of repeating words
-    total_unique_words = len(word_counts)
     total_words = len(words)
+    total_unique_words = len(set(words))
     repeating_words = total_words - total_unique_words
-    repeating_word_percentage = (repeating_words / total_words) * 100
 
-    return repeating_word_percentage
+    return (repeating_words / total_words) * 100
 
 
 async def long_word_filter(text: str, length):
@@ -144,22 +145,24 @@ async def long_word_filter(text: str, length):
 
 
 async def mention_filter(text: str, guild: discord.Guild):
-    mentions = re.findall(r"<@!?\d+>", text)
+    mentions = re.findall(r"<(@!?\d+|@&\d+|#\d+)>", text)
     for mention in mentions:
-        # Extract the user ID from the mention
-        user_id = int(re.findall(r"\d+", mention)[0])
+        full_mention = f"<{mention}>"
+        id_part = int(re.findall(r"\d+", mention)[0])
 
-        # Retrieve the user object using the user ID
-        user = guild.get_member(user_id)
-
-        # Replace the mention with the user's regular name
-        if user:
-            if user.nick:
-                name = user.nick
-            else:
-                name = user.display_name
-
-            text = text.replace(mention, f"to {name}")
+        if mention.startswith("@&"):
+            role = guild.get_role(id_part)
+            if role:
+                text = text.replace(full_mention, f"at {role.name}")
+        elif mention.startswith("#"):
+            channel = guild.get_channel(id_part)
+            if channel:
+                text = text.replace(full_mention, f"in {channel.name}")
+        else:
+            user = guild.get_member(id_part)
+            if user:
+                name = user.nick or user.display_name
+                text = text.replace(full_mention, f"to {name}")
 
     return text
 
@@ -173,14 +176,14 @@ async def emoji_textifier(text: str):
 
 async def filter_spoilers(text: str):
     spoiler_pattern = r'\|\|(.*?)\|\|'
-    text = re.sub(spoiler_pattern, "spoiler", text)
+    text = re.sub(spoiler_pattern, "spoiler", text, flags=re.DOTALL)
 
     return text
 
 
 async def link_filter(text: str):
     # Regular expression pattern to match URLs
-    url_pattern = re.compile(r"https?://(?:[a-zA-Z0-9$-_@.&+]|[!*\\(),]|%[0-9a-fA-F]{2})+")
+    url_pattern = re.compile(r"https?://(?:[a-zA-Z0-9$_@.&+\-]|[!*\\(),]|%[0-9a-fA-F]{2})+")
 
     # Remove URLs from the text
     text_without_links = re.sub(url_pattern, 'Link', text)
@@ -230,20 +233,10 @@ def repeated_letter_fix(string):
 def command_ignore_filter(text: str, command_prefixes: list):
     for prefix in command_prefixes:
         if text.startswith(prefix):
-            # Check if command contains special characters
-            if any(char in text for char in ["!", "?", ".", ";", ":", "_"]):
-                # Command contains special characters - pass it through
-                return text
-
-            if len(text.split(" ")) > 1:
-                # Command has arguments - may be just text
-                if "play" in text.split(" ")[1]:
-                    # Command is a play command, ignore it
-                    return ""
-            else:
-                # Command has no arguments - ignore it
+            command_word = text.split(" ")[0]
+            command = command_word[len(prefix):]
+            if command.isalpha():
                 return ""
-
     return text
 
 async def filter_message(self, text: discord.Message):
@@ -295,7 +288,10 @@ async def filter_message(self, text: discord.Message):
     filtered = repeated_letter_fix(filtered)
 
     # Limit the message length
-    filtered = filtered[:max_message_length]
+    if len(filtered) > max_message_length:
+        truncated = filtered[:max_message_length]
+        last_space = truncated.rfind(" ")
+        filtered = truncated[:last_space] if last_space > 0 else truncated
 
     return filtered
 
