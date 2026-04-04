@@ -108,34 +108,24 @@ async def whitelist_remove_success(response_string: str):
         elif response_string.startswith("That player does not exist"):
             raise RuntimeError(f"Player %s does not exist!")
 
-
-
 # Async Wrapper Function
-async def run_rcon_command(ip: str, key: str, command: str, port: int = 25575):
+async def run_rcon_command(ip: str, key: str, command: str, port: int):
     client = aiomcrcon.Client(ip, port, key)
-
     try:
         await client.connect()
-    except (aiomcrcon.RCONConnectionError, aiomcrcon.IncorrectPasswordError):
-        raise RuntimeError("Error connecting to server!")
-    except asyncio.TimeoutError:
-        raise RuntimeError("Network/Server timeout! (Response took >2 seconds)")
-    finally: # Clean up after ourselves
-        client.close()
-
-    try:
         response = await client.send_cmd(command)
-    except aiomcrcon.ClientNotConnectedError:
-        raise RuntimeError("Error connecting to server!")
+    except (aiomcrcon.RCONConnectionError, aiomcrcon.IncorrectPasswordError, aiomcrcon.ClientNotConnectedError):
+        log.error(f"Error connecting to server {ip}:{port}!")
+        raise RuntimeError("RCON: Error connecting to server!")
     except asyncio.TimeoutError:
+        log.error(f"RCON: Error connecting to server {ip}:{port}! Timeout!")
         raise RuntimeError("Network/Server timeout! (Response took >2 seconds)")
-    finally: # Clean up after ourselves
-        client.close()
+    finally:
+        await client.close()
 
-    await client.close()
     return response[0]
 
-async def lookup_server(ip: str, port: int = 25565):
+async def lookup_server(ip: str, port: int):
     server = JavaServer.lookup(f"{ip}:{port}")
     try:
         status = await server.async_status()
