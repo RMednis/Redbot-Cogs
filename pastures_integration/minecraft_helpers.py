@@ -34,32 +34,32 @@ async def player_count(response_string: str):
 
 
 # Functions for dealing with username resolution
-async def check_name(input: str):
+async def check_name(input_name: str):
     api = mojang.API()
     try:
-        uuid = api.get_uuid(input)
+        uuid = api.get_uuid(input_name)
         if not uuid:
-            raise RuntimeError(f"Could not find user `{input}` from mojang!")
+            raise RuntimeError(f"Could not find user `{input_name}` from mojang!")
         return api.get_username(uuid)
     except mojang.errors.MojangError as err:
-        logging.error(f"Error occurred while trying to resolve the username `{input}`: {err}")
+        logging.error(f"Error occurred while trying to resolve the username `{input_name}`: {err}")
         if "HTTP 429" in str(err):
             raise RuntimeError("Mojang API rate limit reached! \n Cool it down and try again in a bit..")
         elif "HTTP 404" in str(err):
-            raise RuntimeError(f"Could not find user `{input}`. \n Either the username does not exist or you misstyped it.")
+            raise RuntimeError(f"Could not find user `{input_name}`. \n Either the username does not exist or you misstyped it.")
         else:
-            raise RuntimeError(f"Mojang API call failed to find `{input}`. \n A unknwon error occoured.")
+            raise RuntimeError(f"Mojang API call failed to find `{input_name}`. \n A unknwon error occoured.")
 
-async def split_names(input: str):
-    input.strip(" ")
+async def split_names(input_names: str):
+    input_names = input_names.strip(" ")
 
-    if " " in input:
-        data = input.split(" ")
+    if " " in input_names:
+        data = input_names.split(" ")
         data.sort(key=len)
-        input = data[len(data) - 1]
-        input.strip(" ")
+        input_names = data[len(data) - 1]
+        input_names.strip(" ")
 
-    return input
+    return input_names
 
 
 # Function for dealing with existing whitelist data
