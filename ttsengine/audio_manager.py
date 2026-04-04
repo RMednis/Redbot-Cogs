@@ -55,7 +55,7 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int
         # Try and use our existing LavaLink client
         response = (await player.load_tracks(file_path))
 
-    except RuntimeError and lavalink.errors.PlayerException:
+    except (RuntimeError, lavalink.errors.PlayerException):
         try:
             # LavaLink is not connected
             await reconnect_ll(self, vc)
@@ -63,7 +63,7 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int
             # Try and fix it
             player = self.llplayer
             response = (await player.load_tracks(file_path))
-        except RuntimeError and lavalink.errors.PlayerException as err:
+        except (RuntimeError, lavalink.errors.PlayerException) as err:
             log.error("Failed to connect while trying to play TTS :(")
             log.error(err)
 
