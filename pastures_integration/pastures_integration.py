@@ -377,6 +377,7 @@ class PasturesIntegration(commands.Cog):
                 await interaction.response.send_message(f"Role for one-click whitelisting is set to: {role.mention}!",
                                                         allowed_mentions=discord.AllowedMentions.none())
                 return
+
         await guild_config.whitelisting_role.set(role.id)
         # noinspection PyUnresolvedReferences
         await interaction.response.send_message(f"One click whitelisting is available to everyone "
@@ -593,8 +594,7 @@ class PasturesIntegration(commands.Cog):
                 await interaction.followup.send(embed=embed)
                 return
 
-        else:
-            await interaction.followup.send(f"Server `{server}` not found!")
+        await interaction.followup.send(f"Server `{server}` not found!")
 
     @app_commands.guild_only()
     @app_commands.autocomplete(server=server_autocomplete)
@@ -616,11 +616,10 @@ class PasturesIntegration(commands.Cog):
                 await interaction.response.send_message(embed=embed)
                 return
 
-        else:
-            # noinspection PyUnresolvedReferences
-            await interaction.response.send_message(f"Server `{server}` not found!")
+        # noinspection PyUnresolvedReferences
+        await interaction.response.send_message(f"Server `{server}` not found!")
 
-    # Single click whitelistling reaction listener
+    # Single click whitelisting reaction listener
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
