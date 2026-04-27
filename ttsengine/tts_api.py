@@ -183,7 +183,7 @@ async def filter_spoilers(text: str):
 
 async def link_filter(text: str):
     # Regular expression pattern to match URLs
-    url_pattern = re.compile(r"https?://(?:[a-zA-Z0-9$_@.&+\-]|[!*\\(),]|%[0-9a-fA-F]{2})+")
+    url_pattern = re.compile(r"https?://\S+")
 
     # Remove URLs from the text
     text_without_links = re.sub(url_pattern, 'Link', text)
