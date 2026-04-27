@@ -4,6 +4,7 @@ from typing import Literal
 
 import discord
 import lavalink
+from discord import app_commands
 
 from redbot.core import commands, data_manager
 from redbot.core.bot import Red
@@ -39,6 +40,10 @@ def is_within_time(last_message_time: str, time=5 * 60) -> bool:
         return True
 
     return False
+
+
+async def manage_guild_check(interaction: discord.Interaction) -> bool:
+    return interaction.user.guild_permissions.manage_guild
 
 
 class TTSEngine(TTSCommands, BlacklistCommands, SettingsCommands, commands.Cog):
@@ -141,9 +146,13 @@ class TTSEngine(TTSCommands, BlacklistCommands, SettingsCommands, commands.Cog):
             callback=self.blacklist_add
         )
 
+        self.blacklist_add_app.add_check(manage_guild_check)
+
         self.blacklist_remove_app = discord.app_commands.ContextMenu(
             name="Remove from TTS blacklist", callback=self.blacklist_remove
         )
+
+        self.blacklist_remove_app.add_check(manage_guild_check)
 
         # Make both commands Guild Only
         self.blacklist_add_app.guild_only = True
