@@ -104,7 +104,7 @@ class RegionChanger(commands.Cog):
     async def force_region_update(self, interaction: discord.Interaction) -> str:
         if (interaction.channel.id not in await self.config.guild(interaction.guild).channel_whitelist() or not
                 isinstance(interaction.channel, discord.VoiceChannel)):
-            return "The channel you are in has is not on the whitelist/a voice channel. Did not perform region refresh."
+            return "The channel you are in is not on the whitelist/a voice channel. Did not perform region refresh."
 
         else:
             try:
@@ -199,7 +199,7 @@ class RegionChanger(commands.Cog):
     @app_commands.autocomplete(region_name=region_autocomplete)
 
     @app_commands.command(name="region", description="Change the region of the voice channel")
-    async def region(self,interaction: discord.Interaction, region_name: str = None):
+    async def region(self,interaction: discord.Interaction, region_name: str | None = None):
         if not isinstance(interaction.channel, discord.VoiceChannel):
             return await interaction.response.send_message("This command can only be used in a voice channel",
                                                            ephemeral=True)
