@@ -73,7 +73,7 @@ async def write_message_stats(message_cache: defaultdict, channel_name_cache: de
     except Exception as e:
         log.error(f"Failed to write data points to database: {e}")
         log.error(f"Data points: {data}")
-
+        raise # Bubble the exception up to the caller so it knows we failed to write the data points
 
 async def write_member_stats(guild_id: int, statuses: dict):
     data = []

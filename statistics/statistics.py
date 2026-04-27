@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 import discord
@@ -8,7 +8,7 @@ from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.config import Config
 from statistics import database
-from _collections import defaultdict
+from collections import defaultdict
 
 RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 log = logging.getLogger("red.mednis-cogs.statistics")
@@ -51,11 +51,11 @@ class Statistics(commands.Cog):
 
         self.config.register_global(**default_bot)
 
-    def cog_load(self) -> None:
+    async def cog_load(self) -> None:
         log.info("Statistics cog loaded")
 
-        # Load the config values locally
-        self.bot.loop.create_task(self.load_config())
+        # Load the config values into memory
+        await self.load_config()
 
         # Start the statistics gathering loop
         self.statistics_gather_loop.start()
@@ -139,7 +139,7 @@ class Statistics(commands.Cog):
     async def update_bot_stats(self):
 
         if self.bot.uptime is not None:
-            uptime = (datetime.utcnow() - self.bot.uptime).total_seconds()
+            uptime = (datetime.now(timezone.utc) - self.bot.uptime).total_seconds()
         else:
             uptime = 0
 
@@ -226,8 +226,11 @@ class Statistics(commands.Cog):
         if self.log_message_stats is False:
             return
 
-        await database.write_message_stats(self.message_stats_cache, self.channel_name_cache)
-        self.message_stats_cache.clear()
+        try:
+            await database.write_message_stats(self.message_stats_cache, self.channel_name_cache)
+            self.message_stats_cache.clear()
+        except Exception as e:
+            log.error(f"Failed to write message stats to database, retaining cache: {e}")
 
     """
     Member statistics
