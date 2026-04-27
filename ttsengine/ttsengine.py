@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from distutils.core import setup_keywords
 from typing import Literal
 
 import discord
@@ -153,20 +154,28 @@ class TTSEngine(TTSCommands, BlacklistCommands, SettingsCommands, commands.Cog):
         )
 
         self.blacklist_remove_app.add_check(manage_guild_check)
+        self.debug_message_app = discord.app_commands.ContextMenu(
+            name="Debug TTS Message",
+            callback=self._debug_tts_message
+        )
+        self.debug_message_app.add_check(manage_guild_check)
 
-        # Make both commands Guild Only
+        # Make all commands Guild Only
         self.blacklist_add_app.guild_only = True
         self.blacklist_remove_app.guild_only = True
+        self.debug_message_app.guild_only = True
 
     def cog_load(self):
         # Load app commands when the cog is loaded
         self.bot.tree.add_command(self.blacklist_add_app)
         self.bot.tree.add_command(self.blacklist_remove_app)
+        self.bot.tree.add_command(self.debug_message_app)
 
     def cog_unload(self):
         # Unload app commands when unloading cog
         self.bot.tree.remove_command(self.blacklist_add_app.name, type=self.blacklist_add_app.type)
         self.bot.tree.remove_command(self.blacklist_remove_app.name, type=self.blacklist_remove_app.type)
+        self.bot.tree.remove_command(self.debug_message_app.name, type=self.debug_message_app.type)
         lavalink.unregister_event_listener(self.lavalink_events)
         file_manager.cleanup_audio(self)
 

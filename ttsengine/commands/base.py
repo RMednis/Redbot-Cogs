@@ -12,7 +12,7 @@ class TTSBase:
 
 
 class NonTTSTrack(NamedTuple):
-    # This sotres track information for non-tts tracks
+    # This sorts track information for non-tts tracks
     track: object
     position: int
     was_paused: bool

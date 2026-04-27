@@ -63,12 +63,8 @@ async def download_audio(self, voice: str, text: str):
                 raise RuntimeError("Failed to download audio file.")
 
             # Save the audio file
-            with open(file_path, "wb") as file:
-                while True:
-                    chunk = await response.content.read(1024)
-                    if not chunk:
-                        break
-                    file.write(chunk)
+            content = await response.read()
+            await asyncio.to_thread(write_file, file_path, content)
             await send_voice_statistics(self, text, voice, "public", response.status)
     return file_path
 

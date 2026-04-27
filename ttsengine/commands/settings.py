@@ -7,6 +7,9 @@ import logging
 from redbot.core import app_commands
 
 from ttsengine.commands.base import TTSBase
+import ttsengine.core.text_filter
+from ttsengine.core import text_filter
+from ttsengine.core.settings import TTSGuildSettings
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.settings_commands")
 
@@ -191,6 +194,43 @@ class SettingsCommands(TTSBase):
                     await interaction.followup.send(f"An error occurred: {str(e)}", ephemeral=True)
             else:
                 await interaction.followup.send("Invalid file format. Please upload a JSON file.", ephemeral=True)
+
+    @tts_settings.command(name="debug_message", description="Debug a message to see how it would be processed by the TTS engine.")
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def debug_message(self, interaction: discord.Interaction, message: str,
+                            voice_channel: discord.VoiceChannel = None,
+                            text_channel: discord.TextChannel = None):
+
+        if text_channel is not None:
+            channel = text_channel
+        elif voice_channel is not None:
+            channel = voice_channel
+        else:
+            channel = interaction.channel
+
+        try:
+            message = await channel.fetch_message(int(message))
+        except (discord.NotFound, ValueError):
+            await interaction.response.send_message("Invalid message ID or message not found.", ephemeral=True)
+            return
+
+        await self._debug_tts_message(interaction, message)
+
+    async def _debug_tts_message(self, interaction: discord.Interaction, message: discord.Message):
+        tts_guild_settings = await TTSGuildSettings.from_config(self.config, message.guild)
+        processed = await text_filter.filter_and_format_message(message, tts_guild_settings)
+
+        if processed is None:
+            result = "None (Message was filtered out and would not be sent to TTS)"
+        else:
+            result = processed.text
+
+        await interaction.response.send_message(
+            f"**Input Message:** ```{message.content}```\n"
+            f"**Sent to TTS:** ```{result}```",
+            ephemeral=True
+        )
 
     @tts_settings.command(name="show", description="Show current settings.")
     @app_commands.guild_only()
