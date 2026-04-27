@@ -134,9 +134,11 @@ class RegionChanger(commands.Cog):
     @region_settings.command(name="add_channel", description="Add a channel to the whitelist")
     async def add_channel(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
         if not isinstance(channel, discord.VoiceChannel):
-            return await interaction.response.send_message("The channel must be a voice channel", ephemeral=True)
+            return await interaction.response.send_message(f"{channel.mention} must be a voice channel", ephemeral=True)
 
         async with self.config.guild(interaction.guild).channel_whitelist() as channels:
+            if channel.id in channels:
+                return await interaction.response.send_message(f"{channel.mention} is already whitelisted.", ephemeral=True)
             channels.append(channel.id)
             await self.config.guild(interaction.guild).channel_whitelist.set(channels)
         await interaction.response.send_message(f"Channel {channel.mention} added to the whitelist")
@@ -145,6 +147,9 @@ class RegionChanger(commands.Cog):
     @region_settings.command(name="remove_channel", description="Remove a channel from the whitelist")
     async def remove_channel(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
         async with self.config.guild(interaction.guild).channel_whitelist() as channels:
+            if channel.id not in channels:
+                return await interaction.response.send_message(f"{channel.mention} is not a whitelisted channel.", ephemeral=True)
+
             channels.remove(channel.id)
             await self.config.guild(interaction.guild).channel_whitelist.set(channels)
         await interaction.response.send_message(f"Channel {channel.mention} removed from the whitelist")
