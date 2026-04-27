@@ -174,6 +174,25 @@ class RegionChanger(commands.Cog):
                                                 f"{region_messages}")
 
     @app_commands.guild_only()
+    @region_settings.command(name="list_channels", description="List the channels in the whitelist")
+    async def list_channels(self, interaction: discord.Interaction):
+        channels = await self.config.guild(interaction.guild).channel_whitelist()
+        if not channels:
+            return await interaction.response.send_message("No channels in the whitelist", ephemeral=True)
+
+        channel_mentions = []
+        for channel in channels:
+            channel_obj = interaction.guild.get_channel(channel)
+            if channel_obj:
+                channel_region = channel_obj.rtc_region if isinstance(channel_obj, discord.VoiceChannel) else "N/A"
+
+                channel_mentions.append(f"- {channel_obj.mention} - `{channel_region}` \n")
+            else:
+                channel_mentions.append(f"- Deleted Channel (ID: {channel}) \n")
+
+        await interaction.response.send_message(f"Channels in the whitelist: \n{''.join(channel_mentions)}", ephemeral=True)
+
+    @app_commands.guild_only()
     @app_commands.checks.cooldown(1, 10, key=lambda i: i.user.id)
     @app_commands.rename(region_name="set")
     @app_commands.describe(region_name="The region to change the voice channel to")
