@@ -81,13 +81,7 @@ class RegionChanger(commands.Cog):
                 # Make the list into a nicely formated array of choices
                 choices = {}
                 for region in regions:
-                    # If the region is not in the region_names dict, add it as is
-                    if region not in self.region_names:
-                        choices[region] = region
-
-                    # Otherwise, add it with the name from the region_names dict
-                    else:
-                        choices[region] = self.region_names[region]
+                    choices[region] = self.region_names.get(region, region) # Use the pretty name if we have it, otherwise just use the region name from the API
 
                 # Update the config
                 await self.config.regions.set(choices)
