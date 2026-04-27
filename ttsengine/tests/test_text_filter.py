@@ -48,6 +48,19 @@ def test_emoji_mixed():
     text = "I love <:apples:123456789> and <:grapes:987654321>!"
     assert ttsengine.core.text_filter.emoji_textifier(text) == "I love apples and grapes!"
 
+
+def test_emoji_unicode_single():
+    assert ttsengine.core.text_filter.emoji_textifier("😀") == "grinning face"
+
+def test_emoji_unicode_in_sentence():
+    assert ttsengine.core.text_filter.emoji_textifier("Hello 😀") == "Hello grinning face"
+
+def test_emoji_unicode_multiple():
+    assert ttsengine.core.text_filter.emoji_textifier("😀😂") == "grinning face face with tears of joy"
+
+def test_emoji_unicode_mixed_with_custom():
+    assert ttsengine.core.text_filter.emoji_textifier("😀 <:apple:123456789>") == "grinning face apple"
+
 # Filter Spoiler Tests
 
 def test_filter_spoiler_no_spoiler():

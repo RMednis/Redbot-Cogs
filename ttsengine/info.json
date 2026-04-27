@@ -9,7 +9,7 @@
         "Mednis"
     ],
     "required_cogs": {},
-    "requirements": [],
+    "requirements": ["emoji"],
     "tags": [
         "Audio",
         "TTS"

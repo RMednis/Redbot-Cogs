@@ -3,6 +3,7 @@ import re
 import discord
 from ttsengine.core.settings import TTSGuildSettings, TTSMessage
 import random
+import emoji
 
 
 async def filter_and_format_message(message: discord.Message, settings: TTSGuildSettings)-> TTSMessage|None:
@@ -143,8 +144,25 @@ def mention_filter(text: str, guild: discord.Guild):
 
 
 def emoji_textifier(text: str):
+
+    # Process custom emotes first, replacing them with their names without the colons
+    # Animated emotes can also start with <a:
     emote_pattern = r'<a?:(\w+):\d+>'
     text = re.sub(emote_pattern, lambda match: match.group(1), text)
+
+    # Convert emojis to their text representation i.e :heart:
+    text = emoji.demojize(text, language='en')
+
+    # Process the demojized text to replace :emoji_name: with "emoji name"
+    # Also add a space after the emoji name to ensure proper separation in TTS
+    text = re.sub(r':([a-zA-Z0-9_]+):', lambda m: m.group(1).replace('_', ' ') + ' ', text)
+
+    # Now we deal with the whitespace
+    text = text.strip()
+
+    # Sometimes we might end up adding an aditional space to a emoji that is spaced
+    # We check for that and replace them with one space to avoid weird TTS pauses
+    text = re.sub(r' {2,}', ' ', text)
 
     return text
 
