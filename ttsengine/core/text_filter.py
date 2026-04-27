@@ -13,7 +13,8 @@ async def filter_and_format_message(message: discord.Message, settings: TTSGuild
 
     if settings.say_name:
 
-        if message.author.nick:
+        # Certain authors may not have a nick
+        if getattr(message.author, 'nick', None):
             name = message.author.nick
         else:
             name = message.author.name
@@ -52,6 +53,15 @@ async def filter_and_format_message(message: discord.Message, settings: TTSGuild
             # Otherwise we add the media at the end later.
             postfix += f" with attached {media_type}" if media_type else " with attached media "
 
+    if message.stickers:
+        # All stickers should have a name
+        sticker_name = message.stickers[0].name
+
+        if text == "":
+            text = f" sends the {sticker_name} sticker"
+            says = False
+        else:
+            postfix += f" with the {sticker_name} sticker"
 
     if text == "Link":
         # The text was just a pure link and got clobbered.
@@ -123,7 +133,10 @@ def mention_filter(text: str, guild: discord.Guild):
         else:
             user = guild.get_member(id_part)
             if user:
-                name = user.nick or user.display_name
+                if getattr(user, 'nick', None):
+                    name = user.nick
+                else:
+                    name = user.display_name
                 text = text.replace(full_mention, f"to {name}")
 
     return text

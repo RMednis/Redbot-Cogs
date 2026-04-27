@@ -3,12 +3,12 @@ import lavalink
 import logging
 
 from ttsengine.core import file_manager
-from ttsengine.commands.base import NonTTSTrack
+from ttsengine.core.base import NonTTSTrack, TTSBase
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.audio_manager")
 
 
-async def skip_tts(self):
+async def skip_tts(self: TTSBase):
     log.info("Skipping TTS track.")
 
     if self.llplayer is not None:
@@ -27,7 +27,7 @@ async def skip_tts(self):
     else:
         raise RuntimeError("Could not connect to voice server or `(lavalink)`!")
 
-async def connect_ll(self, vc: discord.VoiceChannel):
+async def connect_ll(self: TTSBase, vc: discord.VoiceChannel):
     try:
         self.llplayer = await lavalink.connect(vc, self_deaf=True)
     except lavalink.errors.NodeNotFound:
@@ -37,14 +37,14 @@ async def connect_ll(self, vc: discord.VoiceChannel):
         raise RuntimeError("Failed to connect to Lavalink!")
 
 
-async def reconnect_ll(self, vc: discord.VoiceChannel):
+async def reconnect_ll(self: TTSBase, vc: discord.VoiceChannel):
     try:
         self.llplayer = await lavalink.connect(vc, self_deaf=True)
     except lavalink.errors.NodeNotFound:
         raise RuntimeError("Lavalink/Discord is not yet ready!")
 
 
-async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int, track_name: str = "TTS"):
+async def play_audio(self: TTSBase, vc: discord.VoiceChannel, file_path: str, volume: int, track_name: str = "TTS"):
 
     # If we don't have a lavalink reference cached.
     if self.llplayer is None:
@@ -126,7 +126,7 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int
         await player.set_volume(volume)
 
 
-async def delete_file_and_remove(self, track):
+async def delete_file_and_remove(self: TTSBase, track: lavalink.Track):
     log.info("Deleting tts track and removing it from the queue.")
     log.info(self.tts_queue)
 

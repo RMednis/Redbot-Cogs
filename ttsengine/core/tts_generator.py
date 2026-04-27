@@ -4,12 +4,13 @@ import time
 import discord
 
 from ttsengine.core import audio_manager, file_manager, text_filter
+from ttsengine.core.base import TTSBase
 from ttsengine.core.settings import TTSGuildSettings
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.tts_generator")
 
 
-async def generate_tts(self, message: discord.Message):
+async def generate_tts(self: TTSBase, message: discord.Message):
 
     tts_guild_settings = await TTSGuildSettings.from_config(self.config, message.guild)
 
@@ -68,7 +69,7 @@ async def generate_tts(self, message: discord.Message):
             log.error(err)
 
 
-async def send_api_statistics(self, message, text, api_latency, voice) -> None:
+async def send_api_statistics(self: TTSBase, message, text, api_latency, voice) -> None:
     statistics_event_tags = {
         "guild_id": message.guild.id,
         "user_id": message.author.id,

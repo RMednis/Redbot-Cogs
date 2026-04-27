@@ -4,7 +4,7 @@ import logging
 from redbot.core import app_commands
 from ttsengine.core import audio_manager
 
-from ttsengine.commands.base import TTSBase
+from ttsengine.core.base import TTSBase
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.tts_commands")
 
@@ -26,7 +26,8 @@ class TTSCommands(TTSBase):
 
     @app_commands.command()
     @app_commands.guild_only()
-    async def tts_volume(self, interaction: discord.Interaction, volume: int):
+    @app_commands.describe(volume="The global volume you wish to set (0-150).")
+    async def tts_volume(self, interaction: discord.Interaction, volume: app_commands.Range[int, 0, 150]):
         """
         Set the TTS volume.
         """

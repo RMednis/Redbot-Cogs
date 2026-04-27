@@ -1,14 +1,16 @@
 import asyncio
 import os
-import urllib
+import urllib.parse
 import uuid
 import logging
 import aiohttp
 
+from ttsengine.core.base import TTSBase
+
 log = logging.getLogger("red.mednis-cogs.poitranslator.file_manager")
 
 
-async def download_audio(self, voice: str, text: str):
+async def download_audio(self: TTSBase, voice: str, text: str):
     """
     Downloads audio from the tts api.
     """
@@ -72,7 +74,7 @@ def write_file(path: str, data: bytes):
     with open(path, 'wb') as f:
         f.write(data)
 
-def cleanup_audio(self):
+def cleanup_audio(self: TTSBase):
     """
     Removes all .mp3 files from the audio folder.
     """
@@ -92,7 +94,7 @@ async def delete_audio(file_path: str):
     """
     await asyncio.to_thread(os.remove, file_path)
 
-async def send_voice_statistics(self, text, voice, server, code) -> None:
+async def send_voice_statistics(self: TTSBase, text, voice, server, code) -> None:
     statistics_event_tags = {
         "voice": voice,
         "server": server,

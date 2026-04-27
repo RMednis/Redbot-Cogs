@@ -2,7 +2,7 @@ import discord
 from redbot.core import app_commands
 from redbot.core.bot import Red
 
-from ttsengine.commands.base import TTSBase
+from ttsengine.core.base import TTSBase
 
 class BlacklistCommands(TTSBase):
     tts_blacklist = app_commands.Group(name="tts_blacklist", description="TTS Blacklist", guild_only=True)
