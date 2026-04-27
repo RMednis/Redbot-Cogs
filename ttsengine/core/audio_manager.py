@@ -2,7 +2,8 @@ import discord
 import lavalink
 import logging
 
-from ttsengine import file_manager
+from ttsengine.core import file_manager
+from ttsengine.commands.base import NonTTSTrack
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.audio_manager")
 
@@ -66,6 +67,7 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int
         except (RuntimeError, lavalink.errors.PlayerException) as err:
             log.error("Failed to connect while trying to play TTS :(")
             log.error(err)
+            return
 
     # Response can theoretically give us multiple tracks... we only need one.
     if len(response.tracks) > 0:
@@ -107,14 +109,14 @@ async def play_audio(self, vc: discord.VoiceChannel, file_path: str, volume: int
 
     else:
         # If the player is playing something else, save the current track and position.
-        last_non_tts_track = (player.current, player.position, player.paused, player.volume)
+        last_non_tts_track = NonTTSTrack(player.current, player.position, player.paused, player.volume)
 
         self.tts_queue.append(track.track_identifier)  # Append the track to the TTS queue.
 
         player.queue.insert(0, track)  # Insert the new track into the top of the queue.
 
         # Add the saved track after the new track, at the same position it was stopped at.
-        player.queue.insert(1, last_non_tts_track[0])
+        player.queue.insert(1, last_non_tts_track.track)
         self.last_non_tts_track = last_non_tts_track
 
         # Skip the current track.

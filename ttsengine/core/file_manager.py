@@ -1,3 +1,4 @@
+import asyncio
 import os
 import urllib
 import uuid
@@ -39,12 +40,9 @@ async def download_audio(self, voice: str, text: str):
                         raise RuntimeError("Failed to download audio file.")
 
                     # Save the audio file
-                    with open(file_path, 'wb') as file:
-                        while True:
-                            chunk = await response.content.read(1024)
-                            if not chunk:
-                                break
-                            file.write(chunk)
+                    content = await response.read()
+
+                    await asyncio.to_thread(write_file, file_path, content)
 
                     await send_voice_statistics(self, text, voice, "local", response.status)
             return file_path
@@ -74,6 +72,9 @@ async def download_audio(self, voice: str, text: str):
             await send_voice_statistics(self, text, voice, "public", response.status)
     return file_path
 
+def write_file(path: str, data: bytes):
+    with open(path, 'wb') as f:
+        f.write(data)
 
 def cleanup_audio(self):
     """
@@ -93,7 +94,7 @@ async def delete_audio(file_path: str):
     """
     Deletes the audio file.
     """
-    os.remove(file_path)
+    await asyncio.to_thread(os.remove, file_path)
 
 async def send_voice_statistics(self, text, voice, server, code) -> None:
     statistics_event_tags = {

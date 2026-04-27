@@ -1,25 +1,47 @@
-import io
-import json
-import os
+import logging
 from datetime import datetime, timezone
 from typing import Literal
 
 import discord
-from redbot.core import commands, app_commands, data_manager
-from redbot.core.bot import Red
-from redbot.core.config import Config
-import logging
 import lavalink
 
-from ttsengine import audio_manager, file_manager, tts_api
+from redbot.core import commands, data_manager
+from redbot.core.bot import Red
+from redbot.core.config import Config
+
+from ttsengine.core import audio_manager, file_manager, tts_generator
+
+# Import command classes
+from ttsengine.commands.blacklist import BlacklistCommands
+from ttsengine.commands.settings import SettingsCommands
+from ttsengine.commands.tts import TTSCommands
 
 RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 
-log = logging.getLogger("red.mednis-cogs.poitranslator")
+log = logging.getLogger("red.mednis-cogs.poitranslator.main")
 
 cooldown = 10 * 60 # 10 minute cooldown between message to show alerts again
 
-class TTSEngine(commands.Cog):
+
+def is_within_time(last_message_time: str, time=5 * 60) -> bool:
+    """
+    Check if the users last message was within a specified time.
+    """
+
+    # If the last message time is not set, return False
+    if last_message_time == "":
+        return False
+
+    last_message_time = datetime.fromisoformat(last_message_time)
+
+    # Check if the last TTS message was within a specified time.
+    if (datetime.now(timezone.utc) - last_message_time).total_seconds() < time:
+        return True
+
+    return False
+
+
+class TTSEngine(TTSCommands, BlacklistCommands, SettingsCommands, commands.Cog):
     """
     A text to speech cog that hooks into RedBots audio system.
     """
@@ -139,579 +161,6 @@ class TTSEngine(commands.Cog):
         lavalink.unregister_event_listener(self.lavalink_events)
         file_manager.cleanup_audio(self)
 
-    tts_settings = app_commands.Group(name="tts_settings", description="TTS Settings", guild_only=True)
-
-    @tts_settings.command(name="set_voice", description="Set the TTS voice for a user.")
-    @app_commands.guild_only()
-    async def tts_set_voice(self, interaction: discord.Interaction, user: discord.Member, voice: str):
-
-        if interaction.user.id not in self.bot.owner_ids:
-            await interaction.response.send_message("You are not authorized to use this command.", ephemeral=True)
-            return
-
-        log.info(f"Setting TTS voice for {user} to {voice}")
-        await self.config.user(user).voice.set(voice)
-        await interaction.response.send_message(f"Set TTS voice for {user.mention} to `{voice}`.", ephemeral=True)
-
-    @tts_settings.command(name="max_message_length", description="The maximum length of a TTS message.")
-    @app_commands.guild_only()
-    async def tts_max_message_length(self, interaction: discord.Interaction, length: int):
-        await self.config.guild(interaction.guild).max_message_length.set(length)
-        await interaction.response.send_message(f"Set the maximum message length to {length} characters.")
-
-    @tts_settings.command(name="repeated_word_percentage",
-                          description="The percentage of repeated words in a message for it to be filtered.")
-    @app_commands.guild_only()
-    async def tts_repeated_word_percentage(self, interaction: discord.Interaction, percentage: int):
-        await self.config.guild(interaction.guild).repeated_word_percentage.set(percentage)
-        await interaction.response.send_message(f"Set the repeated word percentage to {percentage}%.")
-
-    @tts_settings.command(name="max_word_length", description="The maximum length of a word for it to be filtered.")
-    @app_commands.guild_only()
-    async def tts_max_word_length(self, interaction: discord.Interaction, length: int):
-        await self.config.guild(interaction.guild).max_word_length.set(length)
-        await interaction.response.send_message(f"Set the maximum word length to {length} characters.")
-
-    @tts_settings.command(name="say_name", description="Whether to say the name of the user who sent the message.")
-    @app_commands.guild_only()
-    async def tts_say_name(self, interaction: discord.Interaction, say_name: bool):
-        await self.config.guild(interaction.guild).say_name.set(say_name)
-        await interaction.response.send_message(f"Set say name to {say_name}.")
-
-    @tts_settings.command(name="add_word_substitution", description="Add a word substitution")
-    @app_commands.guild_only()
-    async def tts_add_word_substitution(self, interaction: discord.Interaction, source: str, substitution: str):
-        words = await self.config.guild(interaction.guild).word_replacements()
-        if source not in words.keys():
-            words[source] = substitution
-            await self.config.guild(interaction.guild).word_replacements.set(words)
-            await interaction.response.send_message(f"Added word substitution `{source}`:`{substitution}` to word "
-                                                    f"replacements.")
-        else:
-            await interaction.response.send_message(f"Substitution already exists for `{source}`")
-
-    @tts_settings.command(name="remove_word_substitution", description="Remove a word substitution")
-    @app_commands.guild_only()
-    async def remove_word_substitution(self, interaction: discord.Interaction, source: str):
-        words = await self.config.guild(interaction.guild).word_replacements()
-        if source in words.keys():
-            words.pop(source)
-            await self.config.guild(interaction.guild).word_replacements.set(words)
-            await interaction.response.send_message(f"Removed word substitution for word `{source}`")
-        else:
-            await interaction.response.send_message(f"`{source}` does not have a word substitution!")
-
-    @tts_settings.command(name="add_name_substitution", description="Add a name substitution")
-    @app_commands.guild_only()
-    async def tts_add_name_substitution(self, interaction: discord.Interaction, source: str, substitution: str):
-        words = await self.config.guild(interaction.guild).name_replacements()
-        if source not in words.keys():
-            words[source] = substitution
-            await self.config.guild(interaction.guild).name_replacements.set(words)
-            await interaction.response.send_message(f"Added name substitution `{source}`:`{substitution}` to name "
-                                                    f"replacements.")
-        else:
-            await interaction.response.send_message(f"Name substitution already exists for `{source}`")
-
-    @tts_settings.command(name="remove_name_substitution", description="Remove a name substitution")
-    @app_commands.guild_only()
-    async def remove_name_substitution(self, interaction: discord.Interaction, source: str):
-        words = await self.config.guild(interaction.guild).name_replacements()
-        if source in words.keys():
-            words.pop(source)
-            await self.config.guild(interaction.guild).name_replacements.set(words)
-            await interaction.response.send_message(f"Removed name substitution for name `{source}`")
-        else:
-            await interaction.response.send_message(f"`{source}` does not have a name substitution!")
-
-    @tts_settings.command(name="global", description="Export the current settings to a file.")
-    @app_commands.guild_only()
-    async def statistic_logging(self, interaction: discord.Interaction, file:discord.Attachment = None):
-
-        await interaction.response.defer()
-        if not interaction.user.id in self.bot.owner_ids:
-            await interaction.followup.send("You are not authorized to use this command.", ephemeral=True)
-            return
-
-        if file is None:
-            json_response = {
-                "regular_voices": await self.config.regular_voices(),
-                "extra_voices": await self.config.extra_voices(),
-                "statistics": await self.config.statistics(),
-                "local_api": await self.config.local_api(),
-                "local_voices": await self.config.local_voices(),
-                "local_api_url": await self.config.local_api_url(),
-                "public_api_url": await self.config.public_api_url()
-            }
-            json_bytes = io.BytesIO(json.dumps(json_response, indent=4).encode('utf-8'))
-            tts_file = discord.File(json_bytes, filename="tts_settings.json")
-
-            await interaction.followup.send("Here's the current global settings.\n"
-                                              "Edit this file then run the command with the file attached.\n"
-                                              "You can use `{voice}` and `{text}` as placeholders in the URL's!\n",
-                                              file=tts_file ,ephemeral=True)
-            return
-
-        else:
-            if "application/json" in file.content_type:
-
-                # Try and parse the JSON file
-                try:
-                    # Required keys for the JSON file
-                    required_keys = {
-                        "regular_voices": list,
-                        "extra_voices": list,
-                        "statistics": bool,
-                        "local_api": bool,
-                        "local_voices": dict,
-                        "local_api_url": str,
-                        "public_api_url": str
-                    }
-
-                    # Read the file
-                    file_object = await file.read()
-                    settings = json.loads(file_object)
-
-                    # Check if the required keys are in the file
-                    for key, expected_type in required_keys.items():
-                        if key not in settings:
-                            await interaction.followup.send(
-                                f"Missing required key: {key}", ephemeral=True
-                            )
-                            return
-                        if not isinstance(settings[key], expected_type):
-                            await interaction.followup.send(
-                                f"Invalid type for key '{key}'. Expected {expected_type.__name__}.",
-                                ephemeral=True
-                            )
-                            return
-                        if expected_type == list:
-                            for item in settings[key]:
-                                if not isinstance(item, dict):
-                                    await interaction.followup.send(
-                                        f"Invalid type for key '{key}'. Expected list of dictionaries.",
-                                        ephemeral=True
-                                    )
-                                    return
-
-                    await self.config.regular_voices.set(settings["regular_voices"])
-                    await self.config.extra_voices.set(settings["extra_voices"])
-                    await self.config.statistics.set(settings["statistics"])
-                    await self.config.local_api.set(settings["local_api"])
-                    await self.config.local_voices.set(settings["local_voices"])
-                    await self.config.local_api_url.set(settings["local_api_url"])
-                    await self.config.public_api_url.set(settings["public_api_url"])
-
-                    await interaction.followup.send("Settings file uploaded and saved!", ephemeral=True)
-
-                except json.JSONDecodeError:
-                    await interaction.followup.send("Invalid JSON file.", ephemeral=True)
-                except Exception as e:
-                    await interaction.followup.send(f"An error occurred: {str(e)}", ephemeral=True)
-            else:
-                await interaction.followup.send("Invalid file format. Please upload a JSON file.", ephemeral=True)
-
-    @tts_settings.command(name="show", description="Show current settings.")
-    @app_commands.guild_only()
-    async def tts_show(self, interaction: discord.Interaction):
-
-        # Pull all the settings from the guild
-        settings = await self.config.guild(interaction.guild).all()
-
-        # Create an embed for the settings display
-        embed = discord.Embed(title="Current TTS Settings", color=discord.Color.green())
-
-        settings_str = "## Current TTS Settings \n"
-
-        general_settings = ""
-
-        for setting, value in settings.items():  # Go through all the setting options
-
-            # Match settings for a custom output
-            # Otherwise, just output the setting and value
-
-            match setting:
-                case "say_name":
-                    general_settings += f"Say Sender Name Before Message: `{value}`\n"
-
-                case "max_message_length":
-                    general_settings += f"Maximum Message Length: `{value}` characters\n"
-
-                case "max_word_length":
-                    general_settings += f"Maximum Word Length: `{value}` characters\n"
-
-                case "repeated_word_percentage":
-                    general_settings += f"Maximum Repeated Words: `{value}%`\n"
-
-                case "global_tts_volume":
-                    general_settings += f"Global TTS Volume: `{value}%`\n"
-
-                case "whitelisted_channels":
-                    channels = ""
-                    stale_ids = []
-                    for channel in value:
-                        resolved = interaction.guild.get_channel(channel)
-                        if resolved:
-                            channels += f" {resolved.mention},"
-                        else:
-                            stale_ids.append(channel)
-                    if stale_ids:
-                        cleaned = [cid for cid in value if cid not in stale_ids]
-                        await self.config.guild(interaction.guild).whitelisted_channels.set(cleaned)
-                    embed.add_field(name="Whitelisted Channels", value=channels or "`None`")
-
-                case "blacklisted_users":
-                    users = ""
-                    stale_ids = []
-                    for user in value:
-                        member = interaction.guild.get_member(user)
-                        if member:
-                            users += f" {member.mention},"
-                        else:
-                            stale_ids.append(user)
-                    if stale_ids:
-                        cleaned = [uid for uid in value if uid not in stale_ids]
-                        await self.config.guild(interaction.guild).blacklisted_users.set(cleaned)
-                    embed.add_field(name="Blacklisted Users", value=users or "`None`")
-
-                case "name_replacements":
-                    replacement_list = ""
-                    for text, replacement in value.items():
-                        replacement_list += f"- `{text}`: `{replacement}`\n"
-                    embed.add_field(name="Name Replacements", value=replacement_list, inline=False)
-
-                case "word_replacements":
-                    word_replacements = ""
-                    for text, replacement in value.items():
-                        word_replacements += f"- `{text}`: `{replacement}`\n"
-
-                    embed.add_field(name="Word Replacements", value=word_replacements, inline=False)
-
-                case "command_prefixes":
-                    prefix_list = ""
-                    for prefix in value:
-                        prefix_list += f"{prefix}, "
-
-                    if prefix_list == "":
-                        prefix_list = "`None`"
-
-                    general_settings += f"Ignored Command Prefixes: `{prefix_list}`\n"
-
-                case _:
-                    general_settings += f"{setting}: `{value}`\n"
-
-        embed.insert_field_at(index=0, name="General Settings", value=general_settings, inline=False)
-
-        message = await interaction.response.send_message(embed=embed, allowed_mentions=discord.AllowedMentions(users=False))
-
-    @tts_settings.command(name="add_command_prefix", description="Add a command prefix")
-    @app_commands.guild_only()
-    async def add_command_prefix(self, interaction: discord.Interaction, prefix: str):
-        prefixes = await self.config.guild(interaction.guild).command_prefixes()
-        if prefix not in prefixes:
-            prefixes.append(prefix)
-            await self.config.guild(interaction.guild).command_prefixes.set(prefixes)
-            await interaction.response.send_message(f"Added command prefix `{prefix}`")
-        else:
-            await interaction.response.send_message(f"Command prefix `{prefix}` already exists!")
-
-
-    @tts_settings.command(name="remove_command_prefix", description="Remove a command prefix")
-    @app_commands.guild_only()
-    async def remove_command_prefix(self, interaction: discord.Interaction, prefix: str):
-        prefixes = await self.config.guild(interaction.guild).command_prefixes()
-        if prefix in prefixes:
-            prefixes.remove(prefix)
-            await self.config.guild(interaction.guild).command_prefixes.set(prefixes)
-            await interaction.response.send_message(f"Removed command prefix `{prefix}`")
-        else:
-            await interaction.response.send_message(f"Command prefix `{prefix}` does not exist!")
-
-    tts_blacklist = app_commands.Group(name="tts_blacklist", description="TTS Blacklist", guild_only=True)
-
-    @tts_blacklist.command(name="add", description="Prevent a user from using the TTS")
-    @app_commands.guild_only()
-    async def blacklist_add_cmd(self, interaction: discord.Interaction, user: discord.Member):
-        await self.blacklist_add(interaction, user)
-
-    async def blacklist_add(self, interaction: discord.Interaction, user: discord.Member):
-        blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-        if user.id not in blacklist:
-            blacklist.append(user.id)
-            await self.config.guild(interaction.guild).blacklisted_users.set(blacklist)
-            await interaction.response.send_message(f"Added user {user.mention} to blacklist!",
-                                                    allowed_mentions=discord.AllowedMentions(users=False))
-        else:
-            await interaction.response.send_message(f"{user.mention} is already blacklisted!",
-                                                    allowed_mentions=discord.AllowedMentions(users=False))
-
-    @tts_blacklist.command(name="remove", description="Allow a  user to use TTS")
-    @app_commands.guild_only()
-    async def blacklist_remove_cmd(self, interaction: discord.Interaction[Red], user: discord.Member):
-        await self.blacklist_remove(interaction, user)
-
-    async def blacklist_remove(self, interaction: discord.Interaction, user: discord.Member):
-        blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-        if user.id in blacklist:
-            blacklist.remove(user.id)
-            await self.config.guild(interaction.guild).blacklisted_users.set(blacklist)
-            await interaction.response.send_message(f"Removed {user.mention} from blacklist!",
-                                                    allowed_mentions=discord.AllowedMentions(users=False))
-        else:
-            await interaction.response.send_message(f"{user.mention} is not in the blacklist!",
-                                                    allowed_mentions=discord.AllowedMentions(users=False))
-
-    @tts_blacklist.command(name="list", description="List all blacklisted users")
-    @app_commands.guild_only()
-    async def blacklist_list(self, interaction: discord.Interaction):
-        blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-
-        user_list = ""
-        stale_ids = []
-
-        for user_id in blacklist:
-            member = interaction.guild.get_member(user_id)
-            if member:
-                user_list += f"{member.display_name}\n"
-            else:
-                stale_ids.append(user_id)
-
-        if stale_ids:
-            cleaned = [uid for uid in blacklist if uid not in stale_ids]
-            await self.config.guild(interaction.guild).blacklisted_users.set(cleaned)
-
-        if user_list == "":
-            user_list = "None"
-
-        await interaction.response.send_message(f"## TTS Blacklisted users:\n`{user_list}`")
-
-    tts_channels = app_commands.Group(name="tts_channels", description="Whitelisted TTS channels", guild_only=True)
-
-    @tts_channels.command(name="add_text", description="Add whitelisted channel for TTS text")
-    @app_commands.guild_only()
-    async def whitelist_addtext(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
-
-        if channel.id in whitelist:
-            await interaction.response.send_message(f"{channel.mention} is already whitelisted!")
-            return
-
-        whitelist.append(channel.id)
-
-        await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
-        await interaction.response.send_message(f"Added channel {channel.mention} to TTS whitelist!")
-
-    @tts_channels.command(name="add_vc", description="Add whitelisted voice channel for TTS text")
-    @app_commands.guild_only()
-    async def whitelist_addvc(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
-        whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
-
-        if channel.id in whitelist:
-            await interaction.response.send_message(f"{channel.mention} is already whitelisted!")
-            return
-
-        whitelist.append(channel.id)
-        await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
-        await interaction.response.send_message(f"Added channel {channel.mention} to TTS whitelist!")
-
-    @tts_channels.command(name="remove_vc", description="Remove whitelisted voice channel for TTS text")
-    @app_commands.guild_only()
-    async def whitelist_removevc(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
-        whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
-
-        if channel.id not in whitelist:
-            await interaction.response.send_message(f"{channel.mention} is not in the whitelist!")
-            return
-
-        whitelist.remove(channel.id)
-        await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
-        await interaction.response.send_message(f"Removed channel {channel.mention} from TTS whitelist!")
-
-    @tts_channels.command(name="remove_text", description="Remove whitelisted channel for TTS text")
-    @app_commands.guild_only()
-    async def whitelist_removetext(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
-
-        if channel.id not in whitelist:
-            await interaction.response.send_message(f"{channel.mention} is not in the whitelist!")
-            return
-
-        whitelist.remove(channel.id)
-        await self.config.guild(interaction.guild).whitelisted_channels.set(whitelist)
-        await interaction.response.send_message(f"Removed channel {channel.mention} from TTS whitelist!")
-
-    @tts_channels.command(name="list", description="List whitelisted channels")
-    @app_commands.guild_only()
-    async def whitelist_list(self, interaction: discord.Interaction):
-        whitelist = await self.config.guild(interaction.guild).whitelisted_channels()
-
-        message = "Whitelisted TTS Channels:"
-        stale_ids = []
-
-        for channel_id in whitelist:
-            channel = interaction.guild.get_channel(channel_id)
-            if channel:
-                message += f"\n{channel.mention}"
-            else:
-                stale_ids.append(channel_id)
-
-        if stale_ids:
-            cleaned = [cid for cid in whitelist if cid not in stale_ids]
-            await self.config.guild(interaction.guild).whitelisted_channels.set(cleaned)
-
-        await interaction.response.send_message(message)
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    async def skip_tts(self, interaction: discord.Interaction):
-        """
-        Skip the current TTS message.
-        """
-        if interaction.user.voice is not None:
-            blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-            if interaction.user.id not in blacklist:
-                try:
-                    await audio_manager.skip_tts(self)
-                    await interaction.response.send_message("Skipped TTS message!", delete_after=5)
-                except RuntimeError as err:
-                    await interaction.response.send_message(err, delete_after=5)
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    async def tts_volume(self, interaction: discord.Interaction, volume: int):
-        """
-        Set the TTS volume.
-        """
-        if interaction.user.voice is not None:
-            blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-            if interaction.user.id not in blacklist:
-                try:
-                    await self.config.guild(interaction.guild).global_tts_volume.set(volume)
-                    await interaction.response.send_message(f"Set global TTS volume to `{volume}%`!")
-                except RuntimeError as err:
-                    await interaction.response.send_message(err)
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.checks.cooldown(1, 30, key=lambda i: i.user.id)
-    async def summon(self, interaction: discord.Interaction):
-        """
-        Summon the bot to your voice channel.
-        """
-        if interaction.user.voice is None:
-            await interaction.response.send_message("❌ You must be in a voice channel to summon the bot.", ephemeral=True)
-            return
-
-        # Check if the user is blacklisted
-        blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-        if interaction.user.id in blacklist:
-            return
-
-        # Try to connect to the user's voice channel
-        try:
-            await audio_manager.connect_ll(self, interaction.user.voice.channel)
-            await interaction.response.send_message(f" Connected to {interaction.user.voice.channel.mention}!", ephemeral=True)
-            await self.config.user(interaction.user).warning_summon.set(False)
-        except RuntimeError as err:
-            await interaction.response.send_message("❌ Failed to connect to your voice channel.", ephemeral=True)
-
-
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.describe(voice="The TTS voice you wish to use.")
-    @app_commands.describe(extra="Extra voices not available in the regular list.")
-    async def tts_voice(self, interaction: discord.Interaction,
-                        voice: str,
-                        extra: str = None):
-        """
-        Enable TTS for the current user.
-        """
-
-        # Check if the user is blacklisted
-        blacklist = await self.config.guild(interaction.guild).blacklisted_users()
-        if interaction.user.id in blacklist:
-            return
-
-        # Check if User is not in a voice channel
-        if interaction.user.voice is None:
-            await interaction.response.send_message("❌ You must be in a voice channel to use TTS.", ephemeral=True)
-            return
-
-        # Sanity check the options since autocomplete is not mandatory
-        for voice_option in await self.config.regular_voices():
-            if voice_option["value"] == voice:
-                break
-        else:
-            await interaction.response.send_message("❌ Invalid voice selected.", ephemeral=True)
-            return
-
-        # Sanity check the extra voice options
-        if extra is not None:
-            for voice_option in await self.config.extra_voices():
-                if voice_option["value"] == extra:
-                    break
-            else:
-                await interaction.response.send_message("❌ Invalid extra voice selected.", ephemeral=True)
-                return
-
-        if voice == "Extra":
-            if extra is not None:
-                voice = extra
-            else:
-                await interaction.response.send_message("❌ You must select a voice to use TTS.", ephemeral=True)
-                return
-
-        # If the user has TTS disabled
-        if not await self.config.user(interaction.user).tts_enabled():
-            # If the user has disabled TTS and wants to disable it
-            if voice == "disable":
-                await interaction.response.send_message("❌ TTS Was already disabled for you!", ephemeral=True)
-                return
-            # Enable TTS for the user and set the voice
-            else:
-                await self.config.user(interaction.user).voice.set(voice)
-                await self.config.user(interaction.user).tts_enabled.set(True)
-
-                await interaction.response.send_message(f"✅ You have enabled TTS and sound like `{voice}`. \n"
-                                                        f"Any messages you type in the voice channel text channels or no-mic"
-                                                        f" will be read out.", ephemeral=True)
-                return
-
-        # If the user has TTS enabled
-        else:
-            # If the user has TTS enabled and wants to disable it
-            if voice == "disable":
-
-                await self.config.user(interaction.user).tts_enabled.set(False)
-                await interaction.response.send_message("❌ Disabled TTS!", ephemeral=True)
-                return
-
-            # if the user has TTS enabled and wants to change the voice
-            else:
-                await self.config.user(interaction.user).voice.set(voice)
-                await interaction.response.send_message(f"✅ You have changed your TTS voice to `{voice}`. \n"
-                                                        f"Any messages you type in the voice channel text channels or no-mic"
-                                                        f" will be read out.", ephemeral=True)
-
-    @tts_voice.autocomplete("voice")
-    async def tts_voice_autocomplete(self, interaction: discord.Interaction, current: str):
-        voices = await self.config.regular_voices()
-        return [
-            discord.app_commands.Choice(name=voice["name"], value=voice["value"])
-            for voice in voices
-            if current.lower() in voice["name"].lower()
-        ]
-
-    @tts_voice.autocomplete("extra")
-    async def tts_extra_voice_autocomplete(self, interaction: discord.Interaction, current: str):
-        extra_voices = await self.config.extra_voices()
-        return [
-            discord.app_commands.Choice(name=voice["name"], value=voice["value"])
-            for voice in extra_voices
-            if current.lower() in voice["name"].lower()
-        ]
-
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.guild is None:
@@ -737,7 +186,7 @@ class TTSEngine(commands.Cog):
             if message.author.voice is None:
 
                 # Check if the user has been warned about not being in a voice channel
-                if not await self.config.user(message.author).warning_notts() or not await self.is_within_time(last_message_time):
+                if not await self.config.user(message.author).warning_notts() or not is_within_time(last_message_time):
 
                     # Warn the user that they are not in a voice channel
                     await message.reply("❌ You are not in a VC, your messages will not be read out until you join."
@@ -756,13 +205,12 @@ class TTSEngine(commands.Cog):
                 await self.config.user(message.author).warning_notts.set(False)
 
                 # Generate the TTS message and play it
-                await tts_api.generate_tts(self, message)
+                await tts_generator.generate_tts(self, message)
 
             # If the bot is connected to a different voice channel
             elif voice_clients.channel != message.author.voice.channel:
 
-                if not await self.config.user(message.author).warning_summon() or not await self.is_within_time(
-                        last_message_time):
+                if not await self.config.user(message.author).warning_summon() or not is_within_time(last_message_time):
 
                     # If the user has not been warned about the bot being in a different voice channel
                     await message.reply(f"❌ **I'm already in {voice_clients.channel.mention}.** \n"
@@ -790,16 +238,16 @@ class TTSEngine(commands.Cog):
             self.current_track = player.current
 
             if self.last_non_tts_track is not None:
-                if player.current.track_identifier == self.last_non_tts_track[0].track_identifier:
+                if player.current.track_identifier == self.last_non_tts_track.track.track_identifier:
                     # The track that just started was not a tts track, pause it and seek to where it was before.
                     await player.pause()
-                    await player.seek(self.last_non_tts_track[1])
+                    await player.seek(self.last_non_tts_track.position)
 
                     # Set the player volume to the same as we had when playing the previous track
-                    await player.set_volume(self.last_non_tts_track[3])
+                    await player.set_volume(self.last_non_tts_track.volume)
 
                     # Check if the track was paused before we played TTS
-                    if not self.last_non_tts_track[2]:
+                    if not self.last_non_tts_track.was_paused:
                         # Unpause it if needed
                         await player.pause(False)
 
@@ -826,24 +274,6 @@ class TTSEngine(commands.Cog):
                 if self.current_track in player.queue:
                     await player.queue.remove(self.current_track)
                 await audio_manager.delete_file_and_remove(self, self.current_track)
-
-
-    async def is_within_time(self, last_message_time: str, time=5*60) -> bool:
-        """
-        Check if the users last message was within a specified time.
-        """
-
-        # If the last message time is not set, return False
-        if last_message_time == "":
-            return False
-
-        last_message_time = datetime.fromisoformat(last_message_time)
-
-        # Check if the last TTS message was within a specified time.
-        if (datetime.now(timezone.utc) - last_message_time).total_seconds() < time:
-            return True
-
-        return False
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
