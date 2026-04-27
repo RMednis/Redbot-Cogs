@@ -59,10 +59,10 @@ async def filter_and_format_message(message: discord.Message, settings: TTSGuild
         sticker_name = message.stickers[0].name
 
         if text == "":
-            text = f" sends the {sticker_name} sticker"
+            text = f" sends {sticker_name} sticker"
             says = False
         else:
-            postfix += f" with the {sticker_name} sticker"
+            postfix += f" with {sticker_name} sticker"
 
     if text == "Link":
         # The text was just a pure link and got clobbered.

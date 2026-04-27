@@ -168,4 +168,4 @@ async def test_sticker():
     sticker.name = "sheepspin"
     message.stickers = [sticker]
     result = await filter_and_format_message(message, make_settings(say_name=True))
-    assert result.text == "testuser sends the sheepspin sticker"
+    assert result.text == "testuser sends sheepspin sticker"
