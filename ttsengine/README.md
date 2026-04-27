@@ -11,6 +11,7 @@ TTS separately from the general discord volume in system settings.
 
 ## Requirements
 Red 3.5+ is required for this cog to work.
+`emoji` as a aditional dependency.
 
 # Commands
 
@@ -33,6 +34,7 @@ These are the admin facing settings for the TTS cog.
     - `max_message_length <length>` - Set the maximum message length for TTS. Messages longer then this will mean that the message will not be read out.
     - `repeated_word_percentage <percentage>` - Set the percentage of repeated words in a message for TTS. Messages with more then this percentage of repeated words will not be read out.
     - `show` - Show the current settings for the TTS cog.
+    - `debug_message <message_id> <voice channel> <text channel>` - Debug a message to see how it would be read out by the TTS API
 - `/tts_channels` - Set the channels that TTS will read out messages from.
   - `add_vc <channel>` - Add a voice channel to the TTS list.
   - `remove_vc <channel>` - Remove a voice channel from the TTS list.
