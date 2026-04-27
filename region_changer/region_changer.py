@@ -89,11 +89,19 @@ class RegionChanger(commands.Cog):
     async def region_autocomplete(self, interaction: discord.Interaction, current: str):
         # Get config
         regions = await self.config.regions()
+
         # If the config is empty, return the default region names
         if not regions:
             regions = self.region_names
 
-        return [Choice(name=regions[region], value=region) for region in regions.keys() if current.lower() in region.lower()]
+        # Add an automatic option to the top of the list
+        choices = [Choice(name="Automatic", value="auto")]
+
+        # Add the regions to the list of choices, but only if they match the current input
+        choices += [Choice(name=regions[r], value=r) for r in regions if current.lower() in r.lower()]
+
+        # Return the choices, but limit it to 25 just in case
+        return choices[:25]
 
     async def force_region_update(self, interaction: discord.Interaction) -> str:
         if (interaction.channel.id not in await self.config.guild(interaction.guild).channel_whitelist() or not
@@ -180,6 +188,10 @@ class RegionChanger(commands.Cog):
             if channel_obj:
                 channel_region = channel_obj.rtc_region if isinstance(channel_obj, discord.VoiceChannel) else "N/A"
 
+                if channel_region is None:
+                    # If the region is None, it means it's set to automatic
+                    channel_region = "Automatic"
+
                 channel_mentions.append(f"- {channel_obj.mention} - `{channel_region}` \n")
             else:
                 channel_mentions.append(f"- Deleted Channel (ID: {channel}) \n")
@@ -209,32 +221,42 @@ class RegionChanger(commands.Cog):
         if region_name is None or region_name == "":
             return await interaction.response.send_message(f"The current region for {interaction.channel.mention} is `{old_region}`",
                                                            ephemeral=True)
-        # Check if the region is valid
-        if region_name not in await self.config.regions():
+        # Check if the region is valid (not "auto" and not in the list of regions)
+        if region_name != "auto" and region_name not in await self.config.regions():
 
-            if await self.config.regions() == {}:
-                await self.force_region_update(interaction)
+            # Update the region list just in case
+            await self.force_region_update(interaction)
 
-            return await interaction.response.send_message(f"Invalid region `{region_name}`. \n"
-                                                           f"Available regions: `{', '.join(await self.config.regions())}`",
-                                                           ephemeral=True)
+            # Check again if the region is valid after the update
+            if region_name not in await self.config.regions():
+                return await interaction.response.send_message(f"Invalid region `{region_name}`. \n"
+                                                               f"Available regions: `{', '.join(await self.config.regions())}`",
+                                                               ephemeral=True)
 
-        if region_name == old_region:
+        if (region_name == "auto" and old_region is None) or (region_name == old_region):
             return await interaction.response.send_message(f"The region is already set to `{region_name}`", ephemeral=True)
+
+        if region_name == "auto":
+            region_name = None # Setting the region to None will set it to automatic
 
         try:
             await interaction.channel.edit(rtc_region=region_name)
+
         except discord.Forbidden:
             await interaction.response.send_message("I don't have permission to change the region of this channel")
-            return
+            return None
+
         except discord.HTTPException as e:
             await interaction.response.send_message("**Failed to change the region.** \n"
                                                     "This may be temporary or the list of available regions has changed on discord's side.",
                                                     ephemeral=True)
             await self.update_region_list(e)
-            return
+            return None
 
-        await interaction.response.send_message(f"Region of {interaction.channel.mention} changed from `{old_region}` to `{region_name}`")
+        if region_name is None:
+            region_name = "Automatic"
+
+        return await interaction.response.send_message(f"Region of {interaction.channel.mention} changed from `{old_region}` to `{region_name}`")
 
 
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
