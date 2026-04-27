@@ -140,7 +140,8 @@ class RegionChanger(commands.Cog):
             if channel.id in channels:
                 return await interaction.response.send_message(f"{channel.mention} is already whitelisted.", ephemeral=True)
             channels.append(channel.id)
-            await self.config.guild(interaction.guild).channel_whitelist.set(channels)
+
+
         await interaction.response.send_message(f"Channel {channel.mention} added to the whitelist")
 
     @app_commands.guild_only()
@@ -151,7 +152,7 @@ class RegionChanger(commands.Cog):
                 return await interaction.response.send_message(f"{channel.mention} is not a whitelisted channel.", ephemeral=True)
 
             channels.remove(channel.id)
-            await self.config.guild(interaction.guild).channel_whitelist.set(channels)
+
         await interaction.response.send_message(f"Channel {channel.mention} removed from the whitelist")
 
     @app_commands.guild_only()
