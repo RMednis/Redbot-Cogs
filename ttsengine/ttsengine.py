@@ -20,9 +20,6 @@ RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 
 log = logging.getLogger("red.mednis-cogs.poitranslator.main")
 
-cooldown = 10 * 60 # 10 minute cooldown between message to show alerts again
-
-
 def is_within_time(last_message_time: str, time=5 * 60) -> bool:
     """
     Check if the users last message was within a specified time.
