@@ -165,7 +165,7 @@ class RegionChanger(commands.Cog):
         async with self.config.guild(guild).channel_whitelist() as channels:
             channels_new = [channel for channel in channels if guild.get_channel(channel)]
             channel_diff = len(channels) - len(channels_new)
-            await self.config.guild(guild).channel_whitelist.set(channels_new)
+            channels[:] = channels_new
 
         region_messages = await self.force_region_update(interaction)
 
