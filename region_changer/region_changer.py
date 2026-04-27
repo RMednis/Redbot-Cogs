@@ -1,9 +1,8 @@
-from http.client import HTTPException
 from typing import Literal
 
 import discord
 from discord import app_commands
-from discord.app_commands import Choice, Command
+from discord.app_commands import Choice
 import logging
 from redbot.core import commands
 from redbot.core.bot import Red
@@ -128,7 +127,7 @@ class RegionChanger(commands.Cog):
             return await interaction.response.send_message("Region changer disabled")
         else:
             await self.config.guild(interaction.guild).enabled.set(True)
-            await interaction.response.send_message("Region changer enabled")
+            return await interaction.response.send_message("Region changer enabled")
 
     @app_commands.guild_only()
     @region_settings.command(name="add_channel", description="Add a channel to the whitelist")
@@ -147,6 +146,7 @@ class RegionChanger(commands.Cog):
     @app_commands.guild_only()
     @region_settings.command(name="remove_channel", description="Remove a channel from the whitelist")
     async def remove_channel(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
+
         async with self.config.guild(interaction.guild).channel_whitelist() as channels:
             if channel.id not in channels:
                 return await interaction.response.send_message(f"{channel.mention} is not a whitelisted channel.", ephemeral=True)
