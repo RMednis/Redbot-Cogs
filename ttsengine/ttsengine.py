@@ -1,11 +1,9 @@
 import logging
 from datetime import datetime, timezone
-from distutils.core import setup_keywords
 from typing import Literal
 
 import discord
 import lavalink
-from discord import app_commands
 
 from redbot.core import commands, data_manager
 from redbot.core.bot import Red
