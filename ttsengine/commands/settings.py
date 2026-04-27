@@ -7,7 +7,6 @@ import logging
 from redbot.core import app_commands
 
 from ttsengine.commands.base import TTSBase
-import ttsengine.core.text_filter
 from ttsengine.core import text_filter
 from ttsengine.core.settings import TTSGuildSettings
 
