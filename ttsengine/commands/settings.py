@@ -221,12 +221,17 @@ class SettingsCommands(TTSBase):
         processed = await text_filter.filter_and_format_message(message, tts_guild_settings)
 
         if processed is None:
-            result = "None (Message was filtered out and would not be sent to TTS)"
+            result = "(None - Message was filtered out and would not be sent to TTS)"
         else:
             result = processed.text
 
+        if message.content == "":
+            original = "(None)"
+        else:
+            original = message.content
+
         await interaction.response.send_message(
-            f"**Input Message:** ```{message.content}```\n"
+            f"**Input Message:** ```{original}```\n"
             f"**Sent to TTS:** ```{result}```",
             ephemeral=True
         )
