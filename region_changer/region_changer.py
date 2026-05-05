@@ -132,6 +132,7 @@ class RegionChanger(commands.Cog):
             return await interaction.response.send_message("Region changer enabled")
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @region_settings.command(name="add_channel", description="Add a channel to the whitelist")
     async def add_channel(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
         if not isinstance(channel, discord.VoiceChannel):
@@ -146,6 +147,7 @@ class RegionChanger(commands.Cog):
         await interaction.response.send_message(f"Channel {channel.mention} added to the whitelist")
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @region_settings.command(name="remove_channel", description="Remove a channel from the whitelist")
     async def remove_channel(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
 
@@ -158,6 +160,7 @@ class RegionChanger(commands.Cog):
         await interaction.response.send_message(f"Channel {channel.mention} removed from the whitelist")
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @region_settings.command(name="clean", description="Remove non-existent channels from the whitelist")
     async def clean(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -176,6 +179,7 @@ class RegionChanger(commands.Cog):
                                                 f"{region_messages}")
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @region_settings.command(name="list_channels", description="List the channels in the whitelist")
     async def list_channels(self, interaction: discord.Interaction):
         channels = await self.config.guild(interaction.guild).channel_whitelist()
