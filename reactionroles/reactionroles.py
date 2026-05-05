@@ -62,6 +62,7 @@ class ReactionRoles(commands.Cog):
     reaction_role_locks: dict = defaultdict(asyncio.Lock)
 
     @embed.command(name="create", description="Create a new embed")
+    @app_commands.default_permissions(manage_guild=True)
     async def embed_create(self, interaction: discord.Interaction, name: str, config: discord.Attachment = None,
                            channel: discord.TextChannel = None):
         embed_configs = await self.config.guild(interaction.guild).embeds()
@@ -130,6 +131,7 @@ class ReactionRoles(commands.Cog):
                 return await interaction.followup.send(f"Error loading config: `{str(e)}`", ephemeral=False)
 
     @app_commands.autocomplete(name=embed_autocomplete)
+    @app_commands.default_permissions(manage_guild=True)
     @embed.command(name="edit", description="Edit an existing embed")
     async def embed_edit(self, interaction: discord.Interaction, name: str, config: discord.Attachment = None):
         embed_configs = await self.config.guild(interaction.guild).embeds()
@@ -202,6 +204,7 @@ class ReactionRoles(commands.Cog):
         return await interaction.followup.send(f"Embed `{name}` has been updated", ephemeral=False)
 
     @app_commands.autocomplete(name=embed_autocomplete)
+    @app_commands.default_permissions(manage_guild=True)
     @embed.command(name="remove", description="Remove a existing embed")
     async def embed_remove(self, interaction: discord.Interaction, name: str, delete_messages: bool = False):
         embed_configs = await self.config.guild(interaction.guild).embeds()
@@ -254,6 +257,7 @@ class ReactionRoles(commands.Cog):
             return await interaction.followup.send(f"Error removing embed: `{str(e)}`", ephemeral=False)
 
     @app_commands.autocomplete(name=embed_autocomplete)
+    @app_commands.default_permissions(manage_guild=True)
     @embed.command(name="add_reaction", description="Add a reaction role to an existing embed")
     async def embed_add_reaction(self, interaction: discord.Interaction, name: str, emoji: str, role: discord.Role,
                                  unique: bool = False):
@@ -339,6 +343,7 @@ class ReactionRoles(commands.Cog):
             return await interaction.followup.send(f"Error adding reaction: `{str(e)}`", ephemeral=False)
 
     @app_commands.autocomplete(name=embed_autocomplete, emoji=embed_emote_autocomplete)
+    @app_commands.default_permissions(manage_guild=True)
     @embed.command(name="remove_reaction", description="Remove a reaction role from an existing embed")
     async def embed_remove_reaction(self, interaction: discord.Interaction, name: str, emoji: str):
         await interaction.response.defer()
@@ -396,6 +401,7 @@ class ReactionRoles(commands.Cog):
 
     @app_commands.autocomplete(embed=embed_autocomplete)
     @embed.command(name="reaction_list", description="List reaction roles")
+    @app_commands.default_permissions(manage_guild=True)
     async def embed_reaction_list(self, interaction: discord.Interaction, embed: str):
         embed_configs = await self.config.guild(interaction.guild).embeds()
 
@@ -582,6 +588,7 @@ class ReactionRoles(commands.Cog):
 
                     await member.remove_roles(removed_role, reason=f"Reaction Role in embed {config['name']}")
                     return
+
     async def red_delete_data_for_user(self, *, requester: RequestType, user_id: int) -> None:
         # TODO: Replace this with the proper end user data removal handling.
         super().red_delete_data_for_user(requester=requester, user_id=user_id)
