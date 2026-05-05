@@ -115,6 +115,7 @@ class PasturesIntegration(commands.Cog):
                            rcon_port="The RCON port for the server you want to add (Default: 25575).",
                            server_port="The server port for the server you want to add (Default: 25565).",
                            config="A JSON file with the server configuration.")
+    @app_commands.default_permissions(manage_guild=True)
     @servers.command(name="add", description="Add a server to the bot!")
     async def server_add(self, interaction: discord.Interaction[Red], server: str, ip: str, key: str, rcon_port: int = 25575,
                          server_port: int = 25565, config: discord.Attachment = None):
@@ -186,6 +187,7 @@ class PasturesIntegration(commands.Cog):
                                                     f"You should now Configure the server with `\\server edit {server}`!")
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @servers.command(name="list", description="List all servers added to the bot!")
     async def server_list(self, interaction: discord.Interaction):
         """ List all servers added to the bot!
@@ -216,6 +218,7 @@ class PasturesIntegration(commands.Cog):
         return discord.File(json_payload, filename=filename)
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.autocomplete(server_name=server_autocomplete)
     @app_commands.describe(server_name="The name of the server you want to edit.",
                            ip="The changed IP (Optional)",
@@ -300,6 +303,7 @@ class PasturesIntegration(commands.Cog):
         return
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.autocomplete(server=server_autocomplete)
     @app_commands.describe(server="The server you want to show the configuration for.")
     @servers.command(name="show", description="Show a servers configuration!")
@@ -331,6 +335,7 @@ class PasturesIntegration(commands.Cog):
             await interaction.response.send_message(f"No server named `{server}` found!")
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.autocomplete(server=server_autocomplete)
     @app_commands.describe(server="The server you want to set the one click whitelisting emote for",
                            emote="The emote you want to use for one-click reaction whitelisting")
@@ -362,6 +367,7 @@ class PasturesIntegration(commands.Cog):
         return
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.describe(role="The role a user needs to have to use one-click whitelisting")
     @servers.command(name="set_role", description="Set the role for one-click whitelisting!")
     async def server_set_role(self, interaction: discord.Interaction, role: discord.Role = None):
@@ -387,6 +393,7 @@ class PasturesIntegration(commands.Cog):
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.describe(channel="The channel to listen in for one-click whitelisting events")
     @servers.command(name="set_channel", description="Set the channel for one-click whitelisting!")
     async def server_set_channel(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
@@ -412,6 +419,7 @@ class PasturesIntegration(commands.Cog):
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.describe(channel="The channel to send one click whitelisting events to")
     @servers.command(name="set_logging", description="Set the channel for logging!")
     async def server_set_logging(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
@@ -436,6 +444,7 @@ class PasturesIntegration(commands.Cog):
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.autocomplete(server=server_autocomplete)
     @app_commands.describe(server="The server you want to set the embed for",
                            channel="The channel to send the embed to")
@@ -475,6 +484,7 @@ class PasturesIntegration(commands.Cog):
         return
 
     @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.describe(server="The server to remove")
     @app_commands.autocomplete(server=server_autocomplete)
     @servers.command(name="remove", description="Remove a server from the bot!")
