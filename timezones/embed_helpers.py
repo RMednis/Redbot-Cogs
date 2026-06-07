@@ -285,7 +285,7 @@ async def time_convert_from(input_text: str, user_1: discord.Member, user_2: dis
 
     embed = (TimeEmbed(title=f"{greeting_calculator(time_user2.hour)}",
                        description=(f"`{input_text}` for {user_1.mention} is:\n"
-                                    f"# <t:{time_utc.timestamp()}:t>\n"
+                                    f"# <t:{int(time_utc.timestamp())}:t>\n"
                                     f"Which is **{time_user2.strftime('%H:%M')}** for "
                                     f"{user_2.mention} `{await utc_time(tz)}`\n"),
                        colour=color_calculator(time_user2.hour))
@@ -300,7 +300,7 @@ async def time_convert_to(input_text: str, user_from: discord.Member, user_to: d
 
     embed = (TimeEmbed(title=f"{greeting_calculator(time_to.hour)}",
                        description=(f"`{input_text}` for {user_to.mention} is:\n"
-                                    f"# <t:{time_utc.timestamp()}:t>\n"
+                                    f"# <t:{int(time_utc.timestamp())}:t>\n"
                                     f"Which is **{time_to.strftime('%H:%M')}** for "
                                     f"{user_from.mention} `{await utc_time(tz)}`\n"),
                        colour=color_calculator(time_to.hour))
