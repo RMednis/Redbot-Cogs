@@ -139,7 +139,10 @@ class Statistics(commands.Cog):
     async def update_bot_stats(self):
 
         if self.bot.uptime is not None:
-            uptime = (datetime.now(timezone.utc) - self.bot.uptime).total_seconds()
+            bot_uptime = self.bot.uptime
+            bot_uptime = bot_uptime.replace(tzinfo=timezone.utc)
+            uptime = (datetime.now(timezone.utc) - bot_uptime).total_seconds()
+
         else:
             uptime = 0
 
